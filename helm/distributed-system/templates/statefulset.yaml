@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "distributed-system.fullname" . }}
+  labels:
+    {{- include "distributed-system.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "distributed-system.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "distributed-system.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "distributed-system.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "distributed-system.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.service.grpcPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_PORT
+              value: "{{ .Values.service.grpcPort }}"
+            - name: PEERS
+              value: "{{- range $i, $e := until (int .Values.replicaCount) }}{{ if $i }},{{ end }}{{ include "distributed-system.fullname" $ }}-{{ $i }}.{{ include "distributed-system.fullname" $ }}:{{ $.Values.service.grpcPort }}{{- end }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.service.metricsPort }}"
+            - name: NODE_HOST
+              value: "{{ .Values.config.nodeHost }}"
+            - name: USE_TLS
+              value: "{{ .Values.config.useTls }}"
+            - name: CERT_DIR
+              value: "{{ .Values.config.certDir }}"
+            - name: ETCD_ENDPOINTS
+              value: "http://{{ include "distributed-system.fullname" . }}-etcd:2379"
+            - name: MAX_WORKERS
+              value: "{{ .Values.config.maxWorkers }}"
+            - name: MAX_QUEUE_DEPTH
+              value: "{{ .Values.config.maxQueueDepth }}"
+            - name: CIRCUIT_FAILURE_THRESHOLD
+              value: "{{ .Values.config.circuitFailureThreshold }}"
+            - name: CIRCUIT_RECOVERY_TIMEOUT
+              value: "{{ .Values.config.circuitRecoveryTimeout }}"
+            - name: GOSSIP_INTERVAL
+              value: "{{ .Values.config.gossipInterval }}"
+            - name: FAILURE_TIMEOUT
+              value: "{{ .Values.config.failureTimeout }}"
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tls-certs
+              mountPath: {{ .Values.config.certDir }}
+              readOnly: true
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /app/data
+            {{- end }}
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: {{ include "distributed-system.fullname" . }}-tls
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: distributed-node
+  namespace: distributed-system
+  labels:
+    app: distributed-system
+spec:
+  serviceName: dist-sys
+  replicas: 3
+  selector:
+    matchLabels:
+      app: distributed-system
+  template:
+    metadata:
+      labels:
+        app: distributed-system
+    spec:
+      containers:
+        - name: node
+          image: distributed-system:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_PORT
+              value: "8000"
+            - name: PEERS
+              value: "distributed-node-0.dist-sys:8000,distributed-node-1.dist-sys:8000,distributed-node-2.dist-sys:8000"
+            - name: METRICS_PORT
+              value: "9090"
+          envFrom:
+            - configMapRef:
+                name: dist-sys-config
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /app/certs
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: dist-sys-tls

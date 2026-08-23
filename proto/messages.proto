@@ -1,0 +1,107 @@
+# 1. Protobuf Schema
+proto_content = '''syntax = "proto3";
+
+package distributed;
+
+option go_package = "github.com/example/distributed-system/proto";
+
+// Message types matching the binary protocol
+enum MessageType {
+  HEARTBEAT = 0;
+  REQUEST = 1;
+  RESPONSE = 2;
+  GOSSIP = 3;
+  HEALTH_CHECK = 4;
+  BACKPRESSURE = 5;
+  CIRCUIT_OPEN = 6;
+  CIRCUIT_CLOSE = 7;
+  SHUTDOWN = 8;
+  BATCH = 9;
+}
+
+// Vector clock entry for causal consistency
+message VectorClockEntry {
+  string node_id = 1;
+  uint64 timestamp = 2;
+  uint64 counter = 3;
+}
+
+// Main message envelope
+message Message {
+  MessageType msg_type = 1;
+  string sender_id = 2;
+  string correlation_id = 3;
+  double timestamp = 4;
+  int32 ttl = 5;
+  bytes payload = 6;
+  repeated VectorClockEntry vector_clock = 7;  // Causal ordering
+}
+
+// Gossip payload
+message GossipPayload {
+  message MemberInfo {
+    string node_id = 1;
+    string address = 2;
+    int32 port = 3;
+    double last_seen = 4;
+    double load = 5;
+    bool healthy = 6;
+    map<string, string> metadata = 7;
+  }
+  repeated MemberInfo members = 1;
+  repeated string suspected = 2;
+  string sender = 3;
+  double load = 4;
+}
+
+// Request payload
+message RequestPayload {
+  string task = 1;
+  bytes data = 2;
+  map<string, string> params = 3;
+  int32 priority = 4;
+}
+
+// Response payload
+message ResponsePayload {
+  oneof result {
+    bytes data = 1;
+    string error = 2;
+  }
+  string status = 3;
+  double processing_time_ms = 4;
+}
+
+// Batch request
+message BatchPayload {
+  repeated RequestPayload requests = 1;
+}
+
+// Health status
+message HealthPayload {
+  string node_id = 1;
+  string status = 2;
+  double load = 3;
+  int32 pending_tasks = 4;
+  string circuit_state = 5;
+  int32 member_count = 6;
+  map<string, double> metrics = 7;
+}
+
+// CRDT operations
+message CRDTOperation {
+  string crdt_id = 1;
+  string crdt_type = 2;  // "g_counter", "pn_counter", "lww_register", "or_set"
+  string operation = 3;  // "increment", "decrement", "set", "add", "remove"
+  bytes value = 4;
+  repeated VectorClockEntry vector_clock = 5;
+  string node_id = 6;
+}
+
+// CRDT state sync
+message CRDTState {
+  string crdt_id = 1;
+  string crdt_type = 2;
+  bytes state = 3;
+  repeated VectorClockEntry vector_clock = 4;
+}

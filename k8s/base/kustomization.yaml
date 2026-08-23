@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: distributed-system
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - service.yaml
+  - statefulset.yaml
+  - etcd.yaml
+  - prometheus.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+images:
+  - name: distributed-system
+    newTag: latest

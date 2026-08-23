@@ -1,0 +1,131 @@
+# Default values for distributed-system
+replicaCount: 3
+
+image:
+  repository: distributed-system
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+service:
+  type: ClusterIP
+  grpcPort: 8000
+  metricsPort: 9090
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: dist-sys.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: dist-sys-tls-cert
+      hosts:
+        - dist-sys.example.com
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "1000m"
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - distributed-system
+          topologyKey: kubernetes.io/hostname
+
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+config:
+  nodeHost: "0.0.0.0"
+  useTls: true
+  certDir: "/app/certs"
+  maxWorkers: 4
+  maxQueueDepth: 500
+  circuitFailureThreshold: 3
+  circuitRecoveryTimeout: 8.0
+  gossipInterval: 2.0
+  failureTimeout: 15.0
+
+etcd:
+  enabled: true
+  replicaCount: 3
+  auth:
+    rbac:
+      create: false
+  persistence:
+    enabled: true
+    size: 10Gi
+
+prometheus:
+  enabled: true
+  service:
+    type: ClusterIP
+    port: 9090
+
+tls:
+  enabled: true
+  # Provide base64-encoded certificates or use cert-manager
+  caCrt: ""
+  serverCrt: ""
+  serverKey: ""

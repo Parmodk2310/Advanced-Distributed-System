@@ -1,0 +1,105 @@
+version: "3.8"
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.11
+    container_name: dist-sys-etcd
+    environment:
+      - ETCD_NAME=etcd0
+      - ETCD_DATA_DIR=/etcd-data
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER=etcd0=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER_TOKEN=dist-sys-cluster
+      - ETCD_INITIAL_CLUSTER_STATE=new
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    volumes:
+      - etcd-data:/etcd-data
+    networks:
+      - dist-sys
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: dist-sys-prometheus
+    volumes:
+      - ./scripts/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - dist-sys
+
+  node-0:
+    build: .
+    container_name: dist-sys-node-0
+    environment:
+      - NODE_ID=node-0
+      - NODE_PORT=8000
+      - PEERS=node-1:8001,node-2:8002
+      - ETCD_ENDPOINTS=http://etcd:2379
+      - USE_TLS=true
+      - METRICS_PORT=9091
+    ports:
+      - "8000:8000"
+      - "9091:9091"
+    depends_on:
+      - etcd
+    networks:
+      - dist-sys
+    volumes:
+      - ./certs:/app/certs
+
+  node-1:
+    build: .
+    container_name: dist-sys-node-1
+    environment:
+      - NODE_ID=node-1
+      - NODE_PORT=8001
+      - PEERS=node-0:8000,node-2:8002
+      - ETCD_ENDPOINTS=http://etcd:2379
+      - USE_TLS=true
+      - METRICS_PORT=9092
+    ports:
+      - "8001:8001"
+      - "9092:9092"
+    depends_on:
+      - etcd
+    networks:
+      - dist-sys
+    volumes:
+      - ./certs:/app/certs
+
+  node-2:
+    build: .
+    container_name: dist-sys-node-2
+    environment:
+      - NODE_ID=node-2
+      - NODE_PORT=8002
+      - PEERS=node-0:8000,node-1:8001
+      - ETCD_ENDPOINTS=http://etcd:2379
+      - USE_TLS=true
+      - METRICS_PORT=9093
+    ports:
+      - "8002:8002"
+      - "9093:9093"
+    depends_on:
+      - etcd
+    networks:
+      - dist-sys
+    volumes:
+      - ./certs:/app/certs
+
+volumes:
+  etcd-data:
+  prometheus-data:
+
+networks:
+  dist-sys:
+    driver: bridge

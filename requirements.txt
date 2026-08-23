@@ -1,0 +1,407 @@
+
+# Core
+asyncio>=3.4.3
+
+# Performance
+uvloop>=0.19.0
+
+# Protocol (choose one or both)
+protobuf>=4.25.0
+msgpack>=1.0.7
+
+# TLS (built-in ssl, no extra deps)
+# cryptography>=41.0.0  # Only if generating certs via Python
+
+# Storage
+etcd3>=0.12.0
+
+# Metrics
+prometheus-client>=0.19.0
+aiohttp>=3.9.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Dev
+black>=23.0.0
+mypy>=1.7.0
+
+
+
+
+
+# 4. Kubernetes manifests
+k8s_namespace = '''apiVersion: v1
+kind: Namespace
+metadata:
+  name: distributed-system
+  labels:
+    name: distributed-system
+'''
+
+k8s_configmap = '''apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dist-sys-config
+  namespace: distributed-system
+data:
+  NODE_HOST: "0.0.0.0"
+  USE_TLS: "true"
+  CERT_DIR: "/app/certs"
+  ETCD_ENDPOINTS: "http://etcd-0.etcd:2379,http://etcd-1.etcd:2379,http://etcd-2.etcd:2379"
+  MAX_WORKERS: "4"
+  MAX_QUEUE_DEPTH: "500"
+  CIRCUIT_FAILURE_THRESHOLD: "3"
+  CIRCUIT_RECOVERY_TIMEOUT: "8.0"
+  GOSSIP_INTERVAL: "2.0"
+  FAILURE_TIMEOUT: "15.0"
+'''
+
+k8s_secret = '''apiVersion: v1
+kind: Secret
+metadata:
+  name: dist-sys-tls
+  namespace: distributed-system
+type: Opaque
+data:
+  ca.crt: BASE64_ENCODED_CA_CRT
+  server.crt: BASE64_ENCODED_SERVER_CRT
+  server.key: BASE64_ENCODED_SERVER_KEY
+---
+# Generate base64 values with:
+# cat certs/ca.crt | base64 -w 0
+# cat certs/server.crt | base64 -w 0
+# cat certs/server.key | base64 -w 0
+'''
+
+k8s_service = '''apiVersion: v1
+kind: Service
+metadata:
+  name: dist-sys
+  namespace: distributed-system
+  labels:
+    app: distributed-system
+spec:
+  clusterIP: None  # Headless service for StatefulSet
+  selector:
+    app: distributed-system
+  ports:
+    - name: grpc
+      port: 8000
+      targetPort: 8000
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+'''
+
+k8s_statefulset = '''apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: distributed-node
+  namespace: distributed-system
+  labels:
+    app: distributed-system
+spec:
+  serviceName: dist-sys
+  replicas: 3
+  selector:
+    matchLabels:
+      app: distributed-system
+  template:
+    metadata:
+      labels:
+        app: distributed-system
+    spec:
+      containers:
+        - name: node
+          image: distributed-system:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_PORT
+              value: "8000"
+            - name: PEERS
+              value: "distributed-node-0.dist-sys:8000,distributed-node-1.dist-sys:8000,distributed-node-2.dist-sys:8000"
+            - name: METRICS_PORT
+              value: "9090"
+          envFrom:
+            - configMapRef:
+                name: dist-sys-config
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /app/certs
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: dist-sys-tls
+'''
+
+k8s_etcd = '''apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd
+  namespace: distributed-system
+spec:
+  serviceName: etcd
+  replicas: 3
+  selector:
+    matchLabels:
+      app: etcd
+  template:
+    metadata:
+      labels:
+        app: etcd
+    spec:
+      containers:
+        - name: etcd
+          image: quay.io/coreos/etcd:v3.5.11
+          ports:
+            - containerPort: 2379
+              name: client
+            - containerPort: 2380
+              name: peer
+          env:
+            - name: ETCD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ETCD_DATA_DIR
+              value: /etcd-data
+            - name: ETCD_LISTEN_CLIENT_URLS
+              value: "http://0.0.0.0:2379"
+            - name: ETCD_ADVERTISE_CLIENT_URLS
+              value: "http://$(ETCD_NAME).etcd:2379"
+            - name: ETCD_LISTEN_PEER_URLS
+              value: "http://0.0.0.0:2380"
+            - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
+              value: "http://$(ETCD_NAME).etcd:2380"
+            - name: ETCD_INITIAL_CLUSTER
+              value: "etcd-0=http://etcd-0.etcd:2380,etcd-1=http://etcd-1.etcd:2380,etcd-2=http://etcd-2.etcd:2380"
+            - name: ETCD_INITIAL_CLUSTER_TOKEN
+              value: "dist-sys-cluster"
+            - name: ETCD_INITIAL_CLUSTER_STATE
+              value: "new"
+          volumeMounts:
+            - name: etcd-data
+              mountPath: /etcd-data
+  volumeClaimTemplates:
+    - metadata:
+        name: etcd-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  namespace: distributed-system
+  labels:
+    app: etcd
+spec:
+  clusterIP: None
+  selector:
+    app: etcd
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: peer
+      port: 2380
+      targetPort: 2380
+'''
+
+k8s_prometheus = '''apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: distributed-system
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+    scrape_configs:
+      - job_name: 'distributed-nodes'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - distributed-system
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: distributed-system
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: metrics
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: instance
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: distributed-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.48.0
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: storage
+              mountPath: /prometheus
+          args:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: distributed-system
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+  type: ClusterIP
+'''
+
+k8s_ingress = '''apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dist-sys-ingress
+  namespace: distributed-system
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - dist-sys.example.com
+      secretName: dist-sys-tls-cert
+  rules:
+    - host: dist-sys.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dist-sys
+                port:
+                  number: 8000
+'''
+
+k8s_hpa = '''apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: distributed-node-hpa
+  namespace: distributed-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: distributed-node
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+'''
+
+k8s_kustomization = '''apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: distributed-system
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - service.yaml
+  - statefulset.yaml
+  - etcd.yaml
+  - prometheus.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+images:
+  - name: distributed-system
+    newTag: latest

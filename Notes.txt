@@ -1,0 +1,20 @@
+## helm_notes 
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hosts[0].host }}
+{{- else }}
+  kubectl port-forward svc/{{ include "distributed-system.fullname" . }} 8000:8000
+  Visit: http://localhost:8000
+{{- end }}
+
+2. Access Prometheus metrics:
+  kubectl port-forward svc/{{ include "distributed-system.fullname" . }} 9090:9090
+  Visit: http://localhost:9090/metrics
+
+3. View logs:
+  kubectl logs -l app.kubernetes.io/name={{ include "distributed-system.name" . }} -f
+
+4. Scale the cluster:
+  helm upgrade {{ .Release.Name }} . --set replicaCount=5
+

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: distributed-system
+description: A production-grade distributed system with Asyncio, Multiprocessing, TLS, etcd, Prometheus, CRDTs, and uvloop
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com
+dependencies:
+  - name: etcd
+    version: "9.7.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: etcd.enabled
