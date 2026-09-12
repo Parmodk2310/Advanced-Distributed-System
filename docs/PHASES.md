@@ -23,24 +23,36 @@ Exit: clean install, protocol tests green, single-node echo, 10K sequential smok
 
 ## Phase 2 — Compute & Resilience
 
-Add:
+Add/modify:
 
-- `src/distsys/compute/worker_pool.py`
 - `src/distsys/compute/classification.py`
+- `src/distsys/compute/errors.py`
+- `src/distsys/compute/worker_pool.py`
+- `src/distsys/compute/executor.py`
+- `src/distsys/compute/tasks.py`
 - `src/distsys/resilience/backpressure.py`
 - `src/distsys/resilience/rate_limiter.py`
+- `src/distsys/resilience/deadline.py`
 - `src/distsys/resilience/retry.py`
 - `src/distsys/resilience/circuit_breaker.py`
-- `src/distsys/resilience/deadline.py`
+- `proto/messages.proto` (`OVERLOADED`, `RATE_LIMITED`)
+- `src/distsys/node.py` request-pipeline integration
+- `tests/unit/test_classification.py`
+- `tests/unit/test_compute_tasks.py`
 - `tests/unit/test_worker_pool.py`
+- `tests/unit/test_executor.py`
 - `tests/unit/test_backpressure.py`
 - `tests/unit/test_rate_limiter.py`
+- `tests/unit/test_deadline.py`
 - `tests/unit/test_retry.py`
 - `tests/unit/test_circuit_breaker.py`
 - `tests/integration/test_compute_pipeline.py`
 - `tests/integration/test_overload_control.py`
+- `tests/integration/test_deadline_behavior.py`
+- `tests/integration/test_event_loop_responsiveness.py`
+- `scripts/phase2_smoke.py`
 
-Extend `tasks.py` with hash/sort/aggregate. Exit: event loop stays responsive under CPU work and overload is bounded.
+Exit: CPU work is isolated from the event loop, admission is bounded, structured overload/rate-limit/deadline behavior is verified, and retry/circuit-breaker primitives are ready for Phase-3 remote calls.
 
 ## Phase 3 — Three-Node Cluster
 

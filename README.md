@@ -1,74 +1,160 @@
-# Advanced Distributed System — Phase 1
+# Advanced Distributed System — Phase 2
 
-Phase 1 builds the trustworthy single-node foundation for the later distributed cluster.
+Phase 2 extends the reliable Phase-1 TCP/Protobuf foundation with bounded compute execution and reusable resilience primitives while deliberately staying single-node.
 
-## What Phase 1 proves
+## What Phase 2 proves
 
-- Async TCP server/client using `asyncio`
-- Fixed 8-byte frame header: `MAGIC(2) + VERSION(1) + TYPE(1) + BODY_LEN(4)`
-- Protobuf envelope and task messages
-- Correlation IDs
-- Maximum-frame protection
-- Correct TCP fragmentation handling via `readexactly()` and incremental decoding tests
-- Task router with `echo`
-- Explicit protocol/application errors
-- Structured logging
-- Graceful node lifecycle
+- Phase-1 framed TCP + Protobuf protocol remains compatible.
+- Explicit task classification separates asyncio work from CPU work.
+- CPU-bound `hash`, `sort`, and `aggregate` tasks run through `ProcessPoolExecutor`.
+- Conservative default: `CPU_WORKERS=2`.
+- Deterministic bounded admission prevents unbounded in-flight work.
+- The CPU worker pool also bounds submitted process work, including jobs that outlive a client deadline.
+- Token-bucket rate limiting returns structured `RATE_LIMITED` errors.
+- Saturation returns structured `OVERLOADED` errors.
+- A single monotonic request deadline returns structured `TIMEOUT` errors.
+- Retry uses exponential backoff with full jitter and is deadline-aware.
+- Circuit breaker implements CLOSED -> OPEN -> HALF_OPEN -> CLOSED.
+- Retry and circuit breaker are libraries only in Phase 2; they are intentionally not wrapped around local CPU work.
+- CPU integration tests verify the asyncio event loop remains responsive.
 
-Not included yet: multiprocessing, backpressure, retry, circuit breaker, gossip, CRDTs, etcd, TLS, Prometheus, Docker cluster, or Kubernetes.
+Not included yet: gossip, consistent hashing, peer routing, CRDTs, etcd, TLS/mTLS, Prometheus/Grafana, Docker cluster, Kubernetes, or Terraform.
+
+## Architecture
+
+```text
+TCP request
+    |
+    v
+frame + protobuf decode
+    |
+    v
+TokenBucketRateLimiter
+    |
+    v
+BackpressureController
+    |
+    v
+Deadline
+    |
+    v
+TaskExecutor
+    +---- ASYNC ----> TaskRouter / asyncio handler
+    |
+    +---- CPU ------> WorkerPool -> ProcessPoolExecutor(max_workers=2)
+    |
+    v
+structured Protobuf response
+```
 
 ## Setup
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate          # Windows/WSL: use the appropriate activation command
+source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-If you change `proto/messages.proto`, regenerate the Python module:
+If `proto/messages.proto` changes:
 
 ```bash
 make proto
 ```
+
+This regenerates both `messages_pb2.py` and `messages_pb2.pyi`.
+
+## Recommended laptop development profile
+
+```bash
+export NODE_ID=node-0
+export NODE_HOST=127.0.0.1
+export NODE_PORT=18000
+export LOG_LEVEL=INFO
+
+export CPU_WORKERS=2
+export CPU_QUEUE_CAPACITY=200
+export REQUEST_TIMEOUT_SECONDS=5
+export RATE_LIMIT_RPS=500
+export RATE_LIMIT_BURST=100
+```
+
+Port `18000` is only a development recommendation when `8000` conflicts with another local process.
 
 ## Run
 
 Terminal 1:
 
 ```bash
-export NODE_ID=node-0
-export NODE_HOST=127.0.0.1
-export NODE_PORT=8000
 python -m distsys.main
 ```
 
 Terminal 2:
 
 ```bash
-python - <<'PY'
+python scripts/phase2_smoke.py --port 18000
+```
+
+Or call individual tasks:
+
+```python
 import asyncio
 from distsys.client import DistributedClient
 
+
 async def main():
-    client = DistributedClient(host='127.0.0.1', port=8000)
-    print(await client.request('echo', {'message': 'hello'}))
+    client = DistributedClient(host="127.0.0.1", port=18000)
+    print(await client.request("echo", {"message": "hello"}))
+    print(await client.request("hash", {"data": "hello", "rounds": 50000}))
+    print(await client.request("sort", {"values": [5, 1, 4, 2, 3]}))
+    print(await client.request("aggregate", {"values": [1, 2, 3, 4]}))
+
 
 asyncio.run(main())
-PY
 ```
 
-## Test
+## Tests and quality
 
 ```bash
-pytest -q
+make quality
 ```
 
-## Phase-1 smoke benchmark
+The Phase-2 suite includes unit coverage for classification, compute tasks, worker pool, executor, backpressure, rate limiting, deadlines, retry, and circuit breaker plus integration coverage for CPU execution, overload, timeout behavior, and event-loop responsiveness.
 
-Keep the node running, then:
+## Correctness benchmark
+
+The default Phase-2 rate limiter is intentionally conservative, so a fast local smoke client can be rate-limited. For a protocol-correctness run, start a dedicated benchmark node with a high temporary rate limit:
 
 ```bash
-python scripts/smoke_test.py --requests 10000
+export NODE_PORT=18000
+export LOG_LEVEL=WARNING
+export RATE_LIMIT_RPS=1000000
+export RATE_LIMIT_BURST=10000
+python -m distsys.main
 ```
 
-The goal is correctness first: zero corrupted responses and zero failures before Phase 2 introduces CPU workers and overload controls.
+Then in a second terminal:
+
+```bash
+python scripts/smoke_test.py \
+  --host 127.0.0.1 \
+  --port 18000 \
+  --requests 10000 \
+  --mode persistent
+```
+
+Return to the normal `RATE_LIMIT_RPS=500` and `RATE_LIMIT_BURST=100` development defaults afterward. Treat this as a correctness test, not a published performance benchmark. Formal concurrent throughput/latency benchmarking belongs to Phase 6.
+
+## Known Phase-2 limitation
+
+A request deadline can stop waiting for CPU work, but `ProcessPoolExecutor` cannot safely kill a Python function that is already running. The client receives a structured `TIMEOUT`; the underlying CPU job may finish later. Its bounded worker-pool slot remains reserved until actual completion, which prevents timed-out requests from building an unbounded hidden queue. Hard worker preemption is intentionally out of scope for Phase 2.
+
+## Phase-2 exit criteria
+
+- All Phase-1 tests remain green.
+- Built-in CPU tasks execute through the process pool.
+- CPU work does not block echo responsiveness.
+- Overload/rate-limit/deadline failures are structured protocol errors.
+- Retry and circuit-breaker state behavior are fully unit-tested.
+- `make quality` passes.
+
+See `docs/superpowers/specs/2026-09-12-phase2-compute-resilience-design.md` for the design and `docs/superpowers/plans/2026-09-12-phase2-compute-resilience.md` for the implementation plan.
