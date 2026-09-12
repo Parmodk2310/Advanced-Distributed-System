@@ -13,11 +13,15 @@ class ErrorCode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     INVALID_REQUEST: _ClassVar[ErrorCode]
     INTERNAL_ERROR: _ClassVar[ErrorCode]
     TIMEOUT: _ClassVar[ErrorCode]
+    OVERLOADED: _ClassVar[ErrorCode]
+    RATE_LIMITED: _ClassVar[ErrorCode]
 ERROR_CODE_UNSPECIFIED: ErrorCode
 UNKNOWN_TASK: ErrorCode
 INVALID_REQUEST: ErrorCode
 INTERNAL_ERROR: ErrorCode
 TIMEOUT: ErrorCode
+OVERLOADED: ErrorCode
+RATE_LIMITED: ErrorCode
 
 class Envelope(_message.Message):
     __slots__ = ("sender_id", "correlation_id", "timestamp_ms", "ttl", "payload")

@@ -4,23 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "advanced-distributed-system"
-version = "0.1.0"
-description = "Phase 1: reliable async TCP node with framed Protobuf protocol"
+version = "0.2.0"
+description = "Phase 2: bounded async compute execution and resilience primitives"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
   "protobuf>=4.25,<7",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4",
-    "pytest-asyncio>=0.21",
-    "ruff>=0.6",
-    "black>=24.0",
-    "mypy>=1.10",
-    "grpcio-tools==1.81.1",
-    "types-protobuf==7.35.1.20260906",
+  "pytest>=7.4",
+  "pytest-asyncio>=0.21",
+  "ruff>=0.6",
+  "black>=24.0",
+  "mypy>=1.10",
+  "grpcio-tools==1.81.1",
+  "types-protobuf==7.35.1.20260906",
 ]
 
 [project.scripts]
@@ -40,8 +40,8 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py312"
 extend-exclude = [
-    "src/distsys/proto/messages_pb2.py",
-    "src/distsys/proto/messages_pb2.pyi",
+  "src/distsys/proto/messages_pb2.py",
+  "src/distsys/proto/messages_pb2.pyi",
 ]
 
 [tool.black]
