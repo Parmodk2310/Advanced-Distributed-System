@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Self
 
 from distsys.protocol.codec import decode_task_response, encode_task_request
 from distsys.protocol.framing import DEFAULT_MAX_FRAME_SIZE, encode_frame, read_message
@@ -71,7 +71,7 @@ class DistributedClient:
         except ConnectionError:
             pass
 
-    async def __aenter__(self) -> "DistributedClient":
+    async def __aenter__(self) -> Self:
         await self.connect()
         return self
 

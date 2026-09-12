@@ -1,5 +1,3 @@
-import pytest
-
 from distsys.proto import messages_pb2
 from distsys.protocol.codec import (
     decode_task_request,

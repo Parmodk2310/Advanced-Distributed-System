@@ -17,7 +17,7 @@ from distsys.protocol.message import Message, MessageType
 class TaskResponseData:
     success: bool
     result: Any | None
-    error_code: int
+    error_code: messages_pb2.ErrorCode
     error_message: str
     processing_time_us: int
 
@@ -91,7 +91,7 @@ def encode_task_response(
     *,
     success: bool,
     result: Any | None = None,
-    error_code: int = messages_pb2.ERROR_CODE_UNSPECIFIED,
+    error_code: messages_pb2.ErrorCode = messages_pb2.ERROR_CODE_UNSPECIFIED,
     error_message: str = "",
     processing_time_us: int = 0,
 ) -> bytes:

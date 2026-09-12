@@ -32,7 +32,7 @@ class Message:
         payload: bytes,
         correlation_id: str | None = None,
         ttl: int = 8,
-    ) -> "Message":
+    ) -> Message:
         return cls(
             msg_type=MessageType.REQUEST,
             sender_id=sender_id,
@@ -51,7 +51,7 @@ class Message:
         payload: bytes,
         msg_type: MessageType = MessageType.RESPONSE,
         ttl: int = 8,
-    ) -> "Message":
+    ) -> Message:
         return cls(
             msg_type=msg_type,
             sender_id=sender_id,

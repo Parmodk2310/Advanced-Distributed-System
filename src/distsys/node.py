@@ -57,11 +57,7 @@ class DistributedNode:
 
     @property
     def is_running(self) -> bool:
-        return (
-            self._server is not None
-            and self._server.is_serving()
-            and not self._stopping
-        )
+        return self._server is not None and self._server.is_serving() and not self._stopping
 
     async def start(self) -> None:
         if self.is_running:
@@ -83,13 +79,9 @@ class DistributedNode:
             server.close()
             await server.wait_closed()
 
-            raise RuntimeError(
-                "TCP server started without any bound sockets"
-            )
+            raise RuntimeError("TCP server started without any bound sockets")
 
-        self._bound_port = int(
-            sockets[0].getsockname()[1]
-        )
+        self._bound_port = int(sockets[0].getsockname()[1])
 
         self._server = server
 
@@ -142,10 +134,7 @@ class DistributedNode:
 
         if writers:
             await asyncio.gather(
-                *(
-                    writer.wait_closed()
-                    for writer in writers
-                ),
+                *(writer.wait_closed() for writer in writers),
                 return_exceptions=True,
             )
 
@@ -155,10 +144,7 @@ class DistributedNode:
         current_task = asyncio.current_task()
 
         tasks = [
-            task
-            for task in self._handler_tasks
-            if task is not current_task
-            and not task.done()
+            task for task in self._handler_tasks if task is not current_task and not task.done()
         ]
 
         for task in tasks:
@@ -217,7 +203,7 @@ class DistributedNode:
                 )
             except asyncio.IncompleteReadError:
                 return
-            except ProtocolError as exc:
+            except ProtocolError:
                 logger.warning(
                     "protocol error",
                     extra={"event": "protocol_error", "node_id": self.settings.node_id},

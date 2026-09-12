@@ -8,9 +8,14 @@ install:
 install-dev:
 	$(PYTHON) -m pip install -e '.[dev]'
 
-proto:
-	$(PYTHON) -m grpc_tools.protoc -I proto --python_out=src/distsys/proto proto/messages.proto
+.PHONY: proto
 
+proto:
+	python -m grpc_tools.protoc \
+		-I proto \
+		--python_out=src/distsys/proto \
+		--pyi_out=src/distsys/proto \
+		proto/messages.proto
 test:
 	$(PYTHON) -m pytest -q
 
@@ -25,3 +30,12 @@ run:
 
 smoke:
 	$(PYTHON) scripts/smoke_test.py --requests 10000
+
+
+.PHONY: quality
+
+quality:
+	python -m pytest -q
+	ruff check src tests scripts
+	black --check src tests scripts
+	mypy src/distsys

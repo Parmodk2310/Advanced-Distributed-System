@@ -10,9 +10,7 @@ from distsys.utils.config import Settings
 
 @pytest.fixture
 async def running_node(unused_tcp_port):
-    node = DistributedNode(
-        Settings(node_id="node-test", host="127.0.0.1", port=unused_tcp_port)
-    )
+    node = DistributedNode(Settings(node_id="node-test", host="127.0.0.1", port=unused_tcp_port))
     await node.start()
 
     try:

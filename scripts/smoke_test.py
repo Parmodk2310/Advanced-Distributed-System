@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from collections import Counter
 import statistics
 import time
+from collections import Counter
 
 from distsys.client import DistributedClient
 
@@ -38,7 +38,7 @@ async def run(host: str, port: int, requests: int, mode: str) -> None:
                     result = await client.request("echo", payload)
                 if result != payload:
                     mismatches += 1
-            except Exception as exc:  # diagnostic tool: classify, don't hide
+            except Exception as exc:  # noqa: BLE001 - diagnostic harness records all failures
                 failure_types[type(exc).__name__] += 1
             latencies_ms.append((time.perf_counter() - request_started) * 1000)
     finally:

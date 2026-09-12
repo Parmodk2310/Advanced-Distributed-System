@@ -88,9 +88,7 @@ class FrameDecoder:
             if len(self._buffer) < HEADER_SIZE:
                 break
 
-            magic, version, raw_type, body_length = HEADER_STRUCT.unpack(
-                self._buffer[:HEADER_SIZE]
-            )
+            magic, version, raw_type, body_length = HEADER_STRUCT.unpack(self._buffer[:HEADER_SIZE])
             msg_type = _validate_header(
                 magic,
                 version,

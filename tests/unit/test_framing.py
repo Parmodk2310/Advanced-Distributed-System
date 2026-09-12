@@ -1,5 +1,3 @@
-import struct
-
 import pytest
 
 from distsys.protocol.errors import FrameTooLarge, InvalidMagic, UnsupportedVersion

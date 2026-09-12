@@ -18,7 +18,7 @@ class Settings:
     log_level: str = "INFO"
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         return cls(
             node_id=os.getenv("NODE_ID", "node-0"),
             host=os.getenv("NODE_HOST", "127.0.0.1"),
