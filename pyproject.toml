@@ -14,13 +14,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=7.4",
-  "pytest-asyncio>=0.21",
-  "ruff>=0.6",
-  "black>=24.0",
-  "mypy>=1.10",
-  "grpcio-tools>=1.60",
-  "types-protobuf",
+    "pytest>=7.4",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.6",
+    "black>=24.0",
+    "mypy>=1.10",
+    "grpcio-tools==1.81.1",
+    "types-protobuf==7.35.1.20260906",
 ]
 
 [project.scripts]
