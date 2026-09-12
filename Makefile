@@ -1,14 +1,12 @@
 PYTHON ?= python
 
-.PHONY: install install-dev proto test lint format run smoke
+.PHONY: install install-dev proto test lint format quality run smoke phase2-smoke
 
 install:
 	$(PYTHON) -m pip install -e .
 
 install-dev:
 	$(PYTHON) -m pip install -e '.[dev]'
-
-.PHONY: proto quality
 
 proto:
 	$(PYTHON) -m grpc_tools.protoc \
@@ -17,20 +15,20 @@ proto:
 		--pyi_out=src/distsys/proto \
 		proto/messages.proto
 
-quality:
-	$(PYTHON) -m pytest -q
-	ruff check src tests scripts
-	black --check src tests scripts
-	mypy src/distsys
-
 test:
 	$(PYTHON) -m pytest -q
 
 lint:
-	$(PYTHON) -m ruff check src tests
+	$(PYTHON) -m ruff check src tests scripts
 
 format:
 	$(PYTHON) -m black src tests scripts
+
+quality:
+	$(PYTHON) -m pytest -q
+	$(PYTHON) -m ruff check src tests scripts
+	$(PYTHON) -m black --check src tests scripts
+	$(PYTHON) -m mypy src/distsys
 
 run:
 	$(PYTHON) -m distsys.main
@@ -38,4 +36,5 @@ run:
 smoke:
 	$(PYTHON) scripts/smoke_test.py --requests 10000
 
-
+phase2-smoke:
+	$(PYTHON) scripts/phase2_smoke.py

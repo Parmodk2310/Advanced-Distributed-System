@@ -24,15 +24,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emessages.proto\x12\ndistsys.v1\"i\n\x08\x45nvelope\x12\x11\n\tsender_id\x18\x01 \x01(\t\x12\x16\n\x0e\x63orrelation_id\x18\x02 \x01(\t\x12\x14\n\x0ctimestamp_ms\x18\x03 \x01(\x04\x12\x0b\n\x03ttl\x18\x04 \x01(\r\x12\x0f\n\x07payload\x18\x05 \x01(\x0c\"6\n\x0bTaskRequest\x12\x11\n\ttask_name\x18\x01 \x01(\t\x12\x14\n\x0cpayload_json\x18\x02 \x01(\x0c\"=\n\x05\x45rror\x12#\n\x04\x63ode\x18\x01 \x01(\x0e\x32\x15.distsys.v1.ErrorCode\x12\x0f\n\x07message\x18\x02 \x01(\t\"r\n\x0cTaskResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x13\n\x0bresult_json\x18\x02 \x01(\x0c\x12 \n\x05\x65rror\x18\x03 \x01(\x0b\x32\x11.distsys.v1.Error\x12\x1a\n\x12processing_time_us\x18\x04 \x01(\x04*o\n\tErrorCode\x12\x1a\n\x16\x45RROR_CODE_UNSPECIFIED\x10\x00\x12\x10\n\x0cUNKNOWN_TASK\x10\x01\x12\x13\n\x0fINVALID_REQUEST\x10\x02\x12\x12\n\x0eINTERNAL_ERROR\x10\x03\x12\x0b\n\x07TIMEOUT\x10\x04\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emessages.proto\x12\ndistsys.v1\"i\n\x08\x45nvelope\x12\x11\n\tsender_id\x18\x01 \x01(\t\x12\x16\n\x0e\x63orrelation_id\x18\x02 \x01(\t\x12\x14\n\x0ctimestamp_ms\x18\x03 \x01(\x04\x12\x0b\n\x03ttl\x18\x04 \x01(\r\x12\x0f\n\x07payload\x18\x05 \x01(\x0c\"6\n\x0bTaskRequest\x12\x11\n\ttask_name\x18\x01 \x01(\t\x12\x14\n\x0cpayload_json\x18\x02 \x01(\x0c\"=\n\x05\x45rror\x12#\n\x04\x63ode\x18\x01 \x01(\x0e\x32\x15.distsys.v1.ErrorCode\x12\x0f\n\x07message\x18\x02 \x01(\t\"r\n\x0cTaskResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x13\n\x0bresult_json\x18\x02 \x01(\x0c\x12 \n\x05\x65rror\x18\x03 \x01(\x0b\x32\x11.distsys.v1.Error\x12\x1a\n\x12processing_time_us\x18\x04 \x01(\x04*\x91\x01\n\tErrorCode\x12\x1a\n\x16\x45RROR_CODE_UNSPECIFIED\x10\x00\x12\x10\n\x0cUNKNOWN_TASK\x10\x01\x12\x13\n\x0fINVALID_REQUEST\x10\x02\x12\x12\n\x0eINTERNAL_ERROR\x10\x03\x12\x0b\n\x07TIMEOUT\x10\x04\x12\x0e\n\nOVERLOADED\x10\x05\x12\x10\n\x0cRATE_LIMITED\x10\x06\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'messages_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_ERRORCODE']._serialized_start=372
-  _globals['_ERRORCODE']._serialized_end=483
+  _globals['_ERRORCODE']._serialized_start=373
+  _globals['_ERRORCODE']._serialized_end=518
   _globals['_ENVELOPE']._serialized_start=30
   _globals['_ENVELOPE']._serialized_end=135
   _globals['_TASKREQUEST']._serialized_start=137

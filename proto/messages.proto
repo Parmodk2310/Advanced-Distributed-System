@@ -8,6 +8,8 @@ enum ErrorCode {
   INVALID_REQUEST = 2;
   INTERNAL_ERROR = 3;
   TIMEOUT = 4;
+  OVERLOADED = 5;
+  RATE_LIMITED = 6;
 }
 
 message Envelope {
