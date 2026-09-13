@@ -1,0 +1,23 @@
+"""Coordination client protocol."""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+from distsys.coordination.models import CoordinationMember, LeaseHandle
+
+
+class CoordinationClient(Protocol):
+    async def connect(self) -> None: ...
+
+    async def close(self) -> None: ...
+
+    async def grant_lease(self, ttl_seconds: int) -> LeaseHandle: ...
+
+    async def refresh_lease(self, lease: LeaseHandle) -> None: ...
+
+    async def register_member(self, member: CoordinationMember, lease: LeaseHandle) -> None: ...
+
+    async def put_node_metadata(self, member: CoordinationMember) -> None: ...
+
+    async def discover_members(self) -> tuple[CoordinationMember, ...]: ...

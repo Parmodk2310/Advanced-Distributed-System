@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from distsys.causal import VersionVector
 from distsys.cluster.consistent_hash import ConsistentHashRing
+from distsys.cluster.member import ClusterMember
 from distsys.replication.anti_entropy import AntiEntropyPeer, AntiEntropyService, PeerProvider
 from distsys.replication.causal_repair import (
     CausalRepairPeer,
@@ -18,7 +19,8 @@ from distsys.replication.replica_selector import ReplicaSelector
 from distsys.replication.replicator import ReplicationPeerTransport, Replicator
 from distsys.resilience.deadline import Deadline
 from distsys.resilience.retry import RetryPolicy
-from distsys.storage import CrdtStore, StoredCrdtEntry
+from distsys.storage import StoredCrdtEntry
+from distsys.storage.protocol import CrdtStateStore
 
 
 class ReplicationService:
@@ -26,7 +28,7 @@ class ReplicationService:
         self,
         *,
         local_node_id: str,
-        store: CrdtStore,
+        store: CrdtStateStore,
         ring: ConsistentHashRing,
         replication_factor: int,
         peer: Any | None = None,
@@ -68,21 +70,32 @@ class ReplicationService:
             batch_size=anti_entropy_batch_size,
             interval_seconds=anti_entropy_interval_seconds,
         )
-        self._started = False
+        self._replicator_started = False
+        self._anti_entropy_started = False
 
-    async def start(self) -> None:
-        if self._started:
+    async def start_fast_path(self) -> None:
+        if self._replicator_started:
             return
         await self.replicator.start()
+        self._replicator_started = True
+
+    async def start_anti_entropy(self) -> None:
+        if self._anti_entropy_started:
+            return
         await self.anti_entropy.start()
-        self._started = True
+        self._anti_entropy_started = True
+
+    async def start(self) -> None:
+        await self.start_fast_path()
+        await self.start_anti_entropy()
 
     async def stop(self) -> None:
-        if not self._started:
-            return
-        await self.anti_entropy.stop()
-        await self.replicator.stop()
-        self._started = False
+        if self._anti_entropy_started:
+            await self.anti_entropy.stop()
+            self._anti_entropy_started = False
+        if self._replicator_started:
+            await self.replicator.stop()
+            self._replicator_started = False
 
     async def reserve_write(
         self,
@@ -119,6 +132,13 @@ class ReplicationService:
         causal_context: VersionVector,
     ) -> StoredCrdtEntry | None:
         return await self.store.merge_metadata(key, causal_context)
+
+    async def reconcile_peer(
+        self,
+        peer: ClusterMember,
+        keys: tuple[str, ...] | None = None,
+    ) -> object:
+        return await self.anti_entropy.reconcile_peer(peer, keys)
 
     async def digest_snapshot(
         self,

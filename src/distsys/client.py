@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ssl
 from typing import Any, Self
 
 from distsys.protocol.codec import decode_task_response, encode_task_request
@@ -37,12 +38,16 @@ class DistributedClient:
         client_id: str = "client",
         timeout_seconds: float = 5.0,
         max_frame_size: int = DEFAULT_MAX_FRAME_SIZE,
+        ssl_context: ssl.SSLContext | None = None,
+        server_hostname: str | None = None,
     ) -> None:
         self.host = host
         self.port = port
         self.client_id = client_id
         self.timeout_seconds = timeout_seconds
         self.max_frame_size = max_frame_size
+        self.ssl_context = ssl_context
+        self.server_hostname = server_hostname
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._request_lock = asyncio.Lock()
@@ -55,7 +60,12 @@ class DistributedClient:
         if self.connected:
             return
         self._reader, self._writer = await asyncio.wait_for(
-            asyncio.open_connection(self.host, self.port),
+            asyncio.open_connection(
+                self.host,
+                self.port,
+                ssl=self.ssl_context,
+                server_hostname=self.server_hostname if self.ssl_context is not None else None,
+            ),
             timeout=self.timeout_seconds,
         )
 
@@ -110,7 +120,12 @@ class DistributedClient:
     async def request(self, task_name: str, payload: Any, *, routing_key: str = "") -> Any:
         """Send a one-shot request using a fresh TCP connection."""
         reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(self.host, self.port),
+            asyncio.open_connection(
+                self.host,
+                self.port,
+                ssl=self.ssl_context,
+                server_hostname=self.server_hostname if self.ssl_context is not None else None,
+            ),
             timeout=self.timeout_seconds,
         )
         try:

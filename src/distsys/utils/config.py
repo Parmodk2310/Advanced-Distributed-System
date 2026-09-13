@@ -28,6 +28,11 @@ def _env_seeds() -> tuple[SeedAddress, ...]:
     return tuple(SeedAddress.parse(item.strip()) for item in raw.split(",") if item.strip())
 
 
+def _env_endpoints(name: str, default: str) -> tuple[str, ...]:
+    raw = os.getenv(name, default).strip()
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
+
+
 @dataclass(slots=True, frozen=True)
 class Settings:
     node_id: str = "node-0"
@@ -69,6 +74,25 @@ class Settings:
     crdt_replication_retry_max_delay_seconds: float = 1.0
     crdt_anti_entropy_interval_seconds: float = 2.0
     crdt_anti_entropy_batch_size: int = 100
+
+    persistence_enabled: bool = True
+    persistence_db_path: str = "./data/node.db"
+    persistence_queue_capacity: int = 100
+    persistence_busy_timeout_seconds: float = 5.0
+    persistence_sqlite_synchronous: str = "NORMAL"
+
+    etcd_enabled: bool = True
+    etcd_endpoints: tuple[str, ...] = ("http://127.0.0.1:2379",)
+    etcd_namespace: str = "/distsys/v1"
+    etcd_lease_ttl_seconds: int = 15
+    etcd_renew_interval_seconds: float = 5.0
+
+    tls_enabled: bool = False
+    mtls_required: bool = False
+    tls_ca_file: str = ""
+    tls_cert_file: str = ""
+    tls_key_file: str = ""
+    tls_min_version: str = "TLSv1.3"
 
     def __post_init__(self) -> None:
         if self.cpu_workers < 1:
@@ -121,6 +145,31 @@ class Settings:
             raise ValueError("crdt anti entropy interval must be greater than zero")
         if self.crdt_anti_entropy_batch_size < 1:
             raise ValueError("crdt anti entropy batch size must be at least 1")
+
+        if self.persistence_queue_capacity < 1:
+            raise ValueError("persistence queue capacity must be at least 1")
+        if self.persistence_busy_timeout_seconds <= 0:
+            raise ValueError("persistence busy timeout must be greater than zero")
+        if self.persistence_sqlite_synchronous.upper() not in {"OFF", "NORMAL", "FULL", "EXTRA"}:
+            raise ValueError("unsupported SQLite synchronous mode")
+
+        if self.etcd_enabled and not self.etcd_endpoints:
+            raise ValueError("etcd endpoints must not be empty when etcd is enabled")
+        if not self.etcd_namespace.strip("/"):
+            raise ValueError("etcd namespace must not be empty")
+        if self.etcd_lease_ttl_seconds <= 0:
+            raise ValueError("etcd lease TTL must be positive")
+        if self.etcd_renew_interval_seconds <= 0:
+            raise ValueError("etcd renew interval must be positive")
+        if self.etcd_renew_interval_seconds >= self.etcd_lease_ttl_seconds:
+            raise ValueError("etcd renew interval must be less than lease TTL")
+
+        if self.mtls_required and not self.tls_enabled:
+            raise ValueError("MTLS_REQUIRED requires TLS_ENABLED")
+        if self.tls_min_version != "TLSv1.3":
+            raise ValueError("Phase 5 secure profile requires TLSv1.3")
+        if self.tls_enabled and not (self.tls_ca_file and self.tls_cert_file and self.tls_key_file):
+            raise ValueError("TLS_ENABLED requires CA, certificate, and private-key files")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -183,4 +232,24 @@ class Settings:
                 os.getenv("CRDT_ANTI_ENTROPY_INTERVAL_SECONDS", "2.0")
             ),
             crdt_anti_entropy_batch_size=int(os.getenv("CRDT_ANTI_ENTROPY_BATCH_SIZE", "100")),
+            persistence_enabled=_env_bool("PERSISTENCE_ENABLED", True),
+            persistence_db_path=os.getenv("PERSISTENCE_DB_PATH", "./data/node.db"),
+            persistence_queue_capacity=int(os.getenv("PERSISTENCE_QUEUE_CAPACITY", "100")),
+            persistence_busy_timeout_seconds=float(
+                os.getenv("PERSISTENCE_BUSY_TIMEOUT_SECONDS", "5.0")
+            ),
+            persistence_sqlite_synchronous=os.getenv(
+                "PERSISTENCE_SQLITE_SYNCHRONOUS", "NORMAL"
+            ).upper(),
+            etcd_enabled=_env_bool("ETCD_ENABLED", True),
+            etcd_endpoints=_env_endpoints("ETCD_ENDPOINTS", "http://127.0.0.1:2379"),
+            etcd_namespace=os.getenv("ETCD_NAMESPACE", "/distsys/v1"),
+            etcd_lease_ttl_seconds=int(os.getenv("ETCD_LEASE_TTL_SECONDS", "15")),
+            etcd_renew_interval_seconds=float(os.getenv("ETCD_RENEW_INTERVAL_SECONDS", "5")),
+            tls_enabled=_env_bool("TLS_ENABLED", False),
+            mtls_required=_env_bool("MTLS_REQUIRED", False),
+            tls_ca_file=os.getenv("TLS_CA_FILE", ""),
+            tls_cert_file=os.getenv("TLS_CERT_FILE", ""),
+            tls_key_file=os.getenv("TLS_KEY_FILE", ""),
+            tls_min_version=os.getenv("TLS_MIN_VERSION", "TLSv1.3"),
         )

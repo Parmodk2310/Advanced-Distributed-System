@@ -43,3 +43,63 @@ async def test_observe_updates_frontier_without_allocating_local_event():
     observed = await clock.observe(VersionVector({remote: 9}))
     assert observed.get(remote) == 9
     assert observed.get(local) == 0
+
+
+@pytest.mark.asyncio
+async def test_staged_allocation_without_commit_does_not_advance_clock():
+    actor = CausalActor("node-0", 500)
+    clock = CausalClock(actor)
+    before = await clock.frontier()
+    async with clock.staged_allocation() as allocation:
+        assert allocation.dot.counter == 1
+    assert await clock.frontier() == before
+
+
+@pytest.mark.asyncio
+async def test_staged_allocation_commit_advances_clock():
+    actor = CausalActor("node-0", 500)
+    clock = CausalClock(actor)
+    async with clock.staged_allocation() as allocation:
+        allocation.commit()
+        expected = allocation.frontier
+    assert await clock.frontier() == expected
+
+
+@pytest.mark.asyncio
+async def test_staged_allocation_exception_rolls_back_clock():
+    actor = CausalActor("node-0", 500)
+    clock = CausalClock(actor)
+    with pytest.raises(RuntimeError):
+        async with clock.staged_allocation() as allocation:
+            allocation.commit()
+            raise RuntimeError("disk failed")
+    assert await clock.frontier() == VersionVector()
+
+
+@pytest.mark.asyncio
+async def test_restore_replaces_clock_frontier_for_same_actor():
+    actor = CausalActor("node-0", 500)
+    clock = CausalClock(actor)
+    restored = VersionVector({actor: 11, CausalActor("peer", 9): 4})
+    await clock.restore(restored)
+    assert await clock.frontier() == restored
+
+
+@pytest.mark.asyncio
+async def test_staged_observe_rolls_back_without_commit():
+    actor = CausalActor("node-0", 500)
+    remote = CausalActor("node-1", 700)
+    clock = CausalClock(actor)
+    async with clock.staged_observe(VersionVector({remote: 4})) as observation:
+        assert observation.frontier.get(remote) == 4
+    assert await clock.frontier() == VersionVector()
+
+
+@pytest.mark.asyncio
+async def test_staged_observe_commits_frontier():
+    actor = CausalActor("node-0", 500)
+    remote = CausalActor("node-1", 700)
+    clock = CausalClock(actor)
+    async with clock.staged_observe(VersionVector({remote: 4})) as observation:
+        observation.commit()
+    assert (await clock.frontier()).get(remote) == 4

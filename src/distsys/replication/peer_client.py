@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import ssl
 from collections.abc import Callable
 from dataclasses import replace
+from typing import Protocol
 
 from distsys.cluster.member import ClusterMember
 from distsys.protocol.framing import DEFAULT_MAX_FRAME_SIZE, encode_frame, read_message
@@ -24,7 +26,10 @@ from distsys.replication.codec import (
 )
 from distsys.replication.digest import CrdtDigestEntry
 from distsys.resilience.deadline import Deadline, DeadlineExceeded
-from distsys.storage import CrdtStore, StoredCrdtEntry
+from distsys.security.errors import TlsPeerIdentityError
+from distsys.security.identity import verify_node_identity
+from distsys.storage import StoredCrdtEntry
+from distsys.storage.protocol import CrdtStateStore
 
 
 class CrdtPeerProtocolError(ConnectionError):
@@ -38,15 +43,48 @@ class CrdtRemoteError(RuntimeError):
         self.message = message
 
 
+class ReplicationClient(Protocol):
+    async def replicate(
+        self,
+        peer: ClusterMember,
+        state: StoredCrdtEntry,
+        *,
+        timeout_seconds: float,
+    ) -> None: ...
+
+
+class FetchClient(Protocol):
+    async def fetch(
+        self,
+        peer: ClusterMember,
+        key: str,
+        *,
+        timeout_seconds: float,
+    ) -> CrdtResponseData: ...
+
+
+class AntiEntropyClient(ReplicationClient, FetchClient, Protocol):
+    async def digest(
+        self,
+        peer: ClusterMember,
+        entries: tuple[CrdtDigestEntry, ...],
+        *,
+        batch_size: int,
+        timeout_seconds: float,
+    ) -> tuple[CrdtDigestEntry, ...]: ...
+
+
 class CrdtPeerClient:
     def __init__(
         self,
         *,
         local_node_id: str,
         max_frame_size: int = DEFAULT_MAX_FRAME_SIZE,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self.local_node_id = local_node_id
         self.max_frame_size = max_frame_size
+        self.ssl_context = ssl_context
 
     async def _exchange(
         self,
@@ -58,11 +96,28 @@ class CrdtPeerClient:
         if timeout_seconds <= 0:
             raise TimeoutError("CRDT peer exchange timeout exhausted")
         async with asyncio.timeout(timeout_seconds):
-            reader, writer = await asyncio.open_connection(peer.host, peer.port)
+            if self.ssl_context is None:
+                reader, writer = await asyncio.open_connection(peer.host, peer.port)
+            else:
+                reader, writer = await asyncio.open_connection(
+                    peer.host,
+                    peer.port,
+                    ssl=self.ssl_context,
+                    server_hostname=peer.node_id,
+                )
+                ssl_object = writer.get_extra_info("ssl_object")
+                if ssl_object is None:
+                    raise TlsPeerIdentityError("TLS peer did not expose an SSL object")
+                verify_node_identity(ssl_object.getpeercert(), peer.node_id)
             try:
                 writer.write(encode_frame(message, max_frame_size=self.max_frame_size))
                 await writer.drain()
-                response = await read_message(reader, max_frame_size=self.max_frame_size)
+                try:
+                    response = await read_message(reader, max_frame_size=self.max_frame_size)
+                except asyncio.IncompleteReadError as exc:
+                    raise CrdtPeerProtocolError(
+                        "peer closed connection before sending a complete response"
+                    ) from exc
             finally:
                 writer.close()
                 try:
@@ -200,7 +255,7 @@ class ReplicationTransportAdapter:
 
     def __init__(
         self,
-        client: CrdtPeerClient,
+        client: ReplicationClient,
         resolver: Callable[[str], ClusterMember | None],
         timeout_seconds: float,
     ) -> None:
@@ -216,7 +271,7 @@ class ReplicationTransportAdapter:
 
 
 class CausalRepairPeerAdapter:
-    def __init__(self, client: CrdtPeerClient, *, timeout_cap_seconds: float = 1.0) -> None:
+    def __init__(self, client: FetchClient, *, timeout_cap_seconds: float = 1.0) -> None:
         self.client = client
         self.timeout_cap_seconds = timeout_cap_seconds
 
@@ -240,8 +295,8 @@ class CausalRepairPeerAdapter:
 class AntiEntropyPeerAdapter:
     def __init__(
         self,
-        client: CrdtPeerClient,
-        store: CrdtStore,
+        client: AntiEntropyClient,
+        store: CrdtStateStore,
         *,
         timeout_seconds: float = 1.0,
     ) -> None:

@@ -45,3 +45,7 @@ def test_fresh_incarnation_is_positive_and_non_decreasing():
     second = fresh_incarnation()
     assert first > 0
     assert second >= first
+
+
+def test_seed_address_parses_optional_node_identity():
+    assert SeedAddress.parse("node-1@127.0.0.1:18001") == SeedAddress("127.0.0.1", 18001, "node-1")

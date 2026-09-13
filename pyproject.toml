@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "advanced-distributed-system"
-version = "0.4.0"
-description = "Phase 4: causal consistency, CRDT replication, and anti-entropy recovery"
+version = "0.5.0"
+description = "Phase 5: secure persistence, restart recovery, etcd coordination, and mTLS"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "protobuf>=4.25,<7",
+  "etcd3gw>=2.7,<3",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +36,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+  "etcd: requires RUN_ETCD_INTEGRATION=1 and a live local etcd service",
+]
 
 [tool.ruff]
 line-length = 100

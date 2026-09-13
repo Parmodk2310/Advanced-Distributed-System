@@ -28,9 +28,11 @@ def member(node_id: str, port: int, incarnation: int = 10) -> ClusterMember:
 class FakePeerClient:
     def __init__(self) -> None:
         self.join_outcomes: dict[tuple[str, int], object] = {}
+        self.join_timeouts: list[float] = []
         self.ping_outcomes: dict[str, object] = {}
 
     async def join(self, seed, local_member, *, timeout_seconds):
+        self.join_timeouts.append(timeout_seconds)
         outcome = self.join_outcomes[(seed.host, seed.port)]
         if isinstance(outcome, BaseException):
             raise outcome
@@ -101,6 +103,7 @@ async def test_seed_bootstrap_merges_snapshot_and_rebuilds_ring():
         "node-0",
         "node-1",
     }
+    assert peer.join_timeouts == [settings.request_timeout_seconds]
 
 
 @pytest.mark.asyncio
@@ -199,3 +202,27 @@ async def test_ping_request_reports_target_success():
 
     assert ack.success is True
     assert ack.target_node_id == "node-1"
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_seed_override_takes_precedence_over_settings():
+    settings = settings_for(
+        "node-1",
+        18001,
+        seeds=(SeedAddress("127.0.0.1", 19999),),
+    )
+    peer = FakePeerClient()
+    peer.join_outcomes[("127.0.0.1", 18000)] = (
+        member("node-0", 18000),
+        member("node-1", 18001, 20),
+    )
+    service = ClusterService(
+        settings=settings,
+        bound_port=18001,
+        execute_local=local_execute,
+        peer_client=peer,
+        incarnation=20,
+        bootstrap_seeds=(SeedAddress("127.0.0.1", 18000, "node-0"),),
+    )
+    await service.bootstrap()
+    assert {item.node_id for item in await service.membership.snapshot()} == {"node-0", "node-1"}

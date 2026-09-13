@@ -1,118 +1,104 @@
-# Advanced Distributed System — Phase 3
+# Advanced Distributed System — Phase 5
 
-Phase 3 extends the verified Phase-2 async TCP/Protobuf runtime into a small decentralized cluster with static-seed bootstrap, gossip membership, SWIM-lite failure detection, deterministic SHA-256 consistent hashing, single-hop task forwarding, and bounded failover for stateless/idempotent workloads.
+A correctness-first distributed systems project built in incremental releases. The current `v0.5.0` target extends the Phase-4 causally consistent CRDT cluster with local durability, deterministic restart recovery, etcd-backed discovery/leases, and TLS 1.3 mutual authentication.
 
-## What Phase 3 proves
-
-- Three nodes can bootstrap through static seed addresses without a permanent leader.
-- Membership converges through gossip and retains incarnation-aware `ALIVE`, `SUSPECT`, and `DEAD` state.
-- Direct PING plus indirect `PING_REQ` probes distinguish peer failure from one-sided reachability problems.
-- False suspicion can be refuted by a live node with a higher incarnation.
-- Dead-member tombstones prevent same-incarnation stale resurrection.
-- Only `ALIVE` members participate in new consistent-hash ownership.
-- SHA-256 with 64 virtual nodes produces deterministic ownership and deterministic failover candidate ordering.
-- A client may connect to one node while a keyed task executes on another node.
-- Forwarded requests are executed locally at the receiver and are never routed again.
-- Phase-2 full-jitter retry and per-peer circuit breakers are used only for remote task transport.
-- Cluster-control traffic bypasses the public task token bucket and local execution admission.
-- Standalone Phase-2 behavior remains the default when `CLUSTER_ENABLED=false`.
-
-Phase 3 intentionally does **not** implement consensus, exactly-once execution, replicated application state, CRDTs, durable membership, etcd, TLS/mTLS, Prometheus/Grafana, Kubernetes, or Terraform.
-
-## Delivery semantics
-
-Phase 3 provides **best-effort keyed routing with bounded transport retries and failover for stateless/idempotent work**.
-
-It does not claim exactly-once execution. A remote task can complete while its TCP response is lost, so a transport retry can execute a pure/idempotent task more than once. Persistent request deduplication belongs to a later state/recovery phase.
-
-## Architecture
+## Current architecture
 
 ```text
-                         CLIENT
-                           |
-                           v
-                    +-------------+
-                    |   node-0    |
-                    |   :18000    |
-                    +------+------+ 
-                           |
-                      routing_key
-                           |
-                           v
-                  ConsistentHashRing
-                           |
-                 +---------+---------+
-                 |                   |
-              local              remote
-                 |                   |
-                 v                   v
-           TaskExecutor          PeerClient
-                                     |
-                              shared Deadline
-                                     |
-                              Retry + Jitter
-                                     |
-                              CircuitBreaker
-                                     |
-                                     v
-                              +-------------+
-                              |   node-1    |
-                              |   :18001    |
-                              +-------------+
-
-Control plane on the same framed TCP endpoint:
-
-node-0 <---- JOIN / PING / PING_REQ / GOSSIP ----> node-1
-   ^                                                ^
-   |                                                |
-   +------------------------------ control --------> node-2
-                                                    :18002
+                         etcd
+                  discovery + leases
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+   ┌─────────┐       ┌─────────┐       ┌─────────┐
+   │ node-0  │◄─────►│ node-1  │◄─────►│ node-2  │
+   │ :18000  │ mTLS  │ :18001  │ mTLS  │ :18002  │
+   ├─────────┤       ├─────────┤       ├─────────┤
+   │ SWIM    │       │ SWIM    │       │ SWIM    │
+   │ CRDTs   │       │ CRDTs   │       │ CRDTs   │
+   │ causal  │       │ causal  │       │ causal  │
+   │ repair  │       │ repair  │       │ repair  │
+   │ SQLite  │       │ SQLite  │       │ SQLite  │
+   └─────────┘       └─────────┘       └─────────┘
 ```
 
-## Cluster components
+Responsibility boundaries:
 
 ```text
-src/distsys/cluster/
-├── member.py              # immutable member/seed domain types
-├── membership.py          # merge rules, self-refutation, tombstones
-├── codec.py               # cluster Protobuf codecs
-├── consistent_hash.py     # SHA-256 ring + failover candidates
-├── peer_client.py         # peer TCP, retry, per-peer circuit breaker
-├── failure_detector.py    # SWIM-lite direct/indirect probing
-├── gossip.py              # best-effort membership dissemination
-├── cluster_router.py      # keyed local/remote routing + failover
-└── service.py             # bootstrap, lifecycle, control dispatch
+SQLite/WAL        local durable CRDT + causal recovery state
+etcd              discovery, lease registration, coordination metadata
+SWIM-lite         live membership and failure detection
+consistent hash   replica placement and routing
+CRDT layer        merge/convergence semantics
+TLS 1.3 + mTLS    encrypted authenticated node/client transport
 ```
 
-## Protocol additions
+## What Phase 5 adds
 
-Phase 3 preserves the existing numeric values:
+- SQLite WAL-backed local persistence with schema versioning.
+- Stable node installation UUID and durable causal actor/counter/frontier.
+- Atomic persistence of CRDT state, `state_version`, `causal_context`, and causal-clock advancement.
+- Persist-before-memory behavior for local writes, replication, causal repair, and anti-entropy merges.
+- Bounded `PersistenceExecutor` so disk saturation cannot create unbounded async work.
+- Safe SQLite online backup.
+- etcd member registration, discovery, TTL leases, renewal, and recovery.
+- SWIM remains the live failure detector; etcd does not replace it.
+- TLS 1.3 secure profile with mutual certificate verification.
+- Logical certificate SAN binding to `node_id`, preventing one valid cluster certificate from impersonating another node.
+- Recovery readiness gate: application CRDT reads/writes are rejected with `RECOVERY_IN_PROGRESS` until restore/reconciliation completes.
+- Restart reconciliation: stale disk state merges with newer live replica state using the existing CRDT/VersionVector rules.
+
+## Durability semantics
+
+A successful Phase-5 mutation means the local node committed the mutation durably before ACK:
 
 ```text
-REQUEST=1
-RESPONSE=2
-ERROR=3
-HEARTBEAT=4
+causal validation
+      ↓
+persistence admission
+      ↓
+replication reservation
+      ↓
+staged Dot + CRDT state
+      ↓
+SQLite transaction
+  ├─ CRDT state
+  ├─ state_version
+  ├─ causal_context
+  └─ causal clock
+      ↓
+COMMIT
+      ↓
+install in memory
+      ↓
+async replication
+      ↓
+ACK
 ```
 
-and adds:
+This is a **locally durable acknowledgement**, not a quorum-durable acknowledgement. The replication outbox remains volatile. If a node ACKs after local commit and crashes before fan-out, its local database restores the write and anti-entropy repairs other replicas after restart.
+
+Phase 5 does **not** claim exactly-once execution, linearizability, consensus, distributed transactions, or quorum writes.
+
+## Causal identity across restart
+
+SWIM membership incarnation and causal actor incarnation are deliberately separate:
 
 ```text
-JOIN_REQUEST=5
-JOIN_RESPONSE=6
-PING=7
-ACK=8
-PING_REQ=9
-GOSSIP=10
-FORWARDED_REQUEST=11
+before restart
+SWIM incarnation     900
+causal actor          node-2@500
+local causal counter  41
+
+normal restart
+SWIM incarnation     901      # new process epoch
+causal actor          node-2@500
+local causal counter  41      # restored
+next Dot              node-2@500:42
 ```
 
-Existing error codes 0–6 are unchanged. Phase 3 adds:
-
-```text
-NO_ROUTE=7
-PEER_UNAVAILABLE=8
-```
+This prevents causal counter rollback or Dot reuse after an ordinary crash/restart.
 
 ## Setup
 
@@ -122,370 +108,134 @@ source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-After changing `proto/messages.proto`:
+Regenerate Protobuf after schema changes:
 
 ```bash
 make proto
 ```
 
-## Standalone compatibility
-
-Cluster mode is disabled by default:
-
-```bash
-export NODE_ID=node-0
-export NODE_HOST=127.0.0.1
-export NODE_PORT=18000
-export CLUSTER_ENABLED=false
-python -m distsys.main
-```
-
-An unkeyed request still uses the Phase-2 local path:
-
-```python
-await client.request("echo", {"message": "local"})
-```
-
-## Recommended three-node laptop profile
-
-Use one CPU worker per node when all three local nodes are running:
-
-```text
-node-0  127.0.0.1:18000
-node-1  127.0.0.1:18001
-node-2  127.0.0.1:18002
-
-CPU_WORKERS=1
-CPU_QUEUE_CAPACITY=100
-RATE_LIMIT_RPS=500
-RATE_LIMIT_BURST=100
-CLUSTER_VIRTUAL_NODES=64
-```
-
-The default Phase-3 timing profile is:
-
-```text
-CLUSTER_PROBE_INTERVAL_SECONDS=1.0
-CLUSTER_PING_TIMEOUT_SECONDS=0.25
-CLUSTER_INDIRECT_TIMEOUT_SECONDS=0.50
-CLUSTER_INDIRECT_PROBE_COUNT=2
-CLUSTER_SUSPICION_TIMEOUT_SECONDS=3.0
-CLUSTER_DEAD_RETENTION_SECONDS=30.0
-CLUSTER_GOSSIP_INTERVAL_SECONDS=1.0
-```
-
-## Run the local cluster
-
-The runner refuses to start if ports 18000, 18001, or 18002 are already occupied and only terminates child processes it created.
-
-```bash
-make phase3-cluster
-```
-
-Equivalent command:
-
-```bash
-bash scripts/run_phase3_cluster.sh
-```
-
-Logs are written to `.phase3-logs/` by default.
-
-## Inspect the running cluster
-
-In another terminal:
-
-```bash
-source .venv/bin/activate
-make phase3-smoke
-```
-
-The default smoke verifies:
-
-- all three endpoints answer cluster PING,
-- every returned membership snapshot converges to three `ALIVE` members,
-- SHA-256 ring ownership is deterministic,
-- a routing key owned by a remote node executes there via `cluster.whoami`,
-- 100 sample keys map across at least two physical nodes.
-
-For a fully managed failure/failover/rejoin demonstration, ensure the three Phase-3 ports are free and run:
-
-```bash
-python scripts/phase3_smoke.py \
-  --host 127.0.0.1 \
-  --ports 18000 18001 18002 \
-  --managed-command 'bash scripts/run_phase3_cluster.sh'
-```
-
-Managed mode only sends signals to the runner/processes it launched itself.
-
-## Keyed routing example
-
-```python
-import asyncio
-
-from distsys.client import DistributedClient
-
-
-async def main() -> None:
-    client = DistributedClient(host="127.0.0.1", port=18000)
-
-    local = await client.request("echo", {"message": "unkeyed"})
-    routed = await client.request(
-        "cluster.whoami",
-        {},
-        routing_key="customer-123",
-    )
-
-    print(local)
-    print(routed)
-
-
-asyncio.run(main())
-```
-
-`cluster.whoami` is a diagnostic task used to prove where a keyed request actually executed.
-
-## Request flow
-
-```text
-REQUEST without routing_key
-    -> public rate limiter
-    -> local backpressure
-    -> TaskExecutor
-
-REQUEST with routing_key
-    -> public rate limiter
-    -> shared Deadline
-    -> ConsistentHashRing.candidates(key)
-       -> local candidate: local backpressure -> TaskExecutor
-       -> remote candidate: PeerClient -> retry/circuit breaker -> FORWARDED_REQUEST
-
-FORWARDED_REQUEST
-    -> bypass public token bucket
-    -> local deadline from remaining_timeout_ms
-    -> local backpressure
-    -> TaskExecutor
-    -> never route again
-
-JOIN/PING/PING_REQ/GOSSIP
-    -> ClusterService control path
-    -> bypass public task limiter/backpressure
-```
-
-## Failover behavior
-
-Failover to the next consistent-hash candidate is allowed for:
-
-```text
-transport failure
-open peer circuit
-OVERLOADED
-RATE_LIMITED (forward-compatible handling)
-```
-
-The request is **not** replayed to another candidate for:
-
-```text
-INVALID_REQUEST
-UNKNOWN_TASK
-INTERNAL_ERROR
-TIMEOUT
-```
-
-The latter two can represent work that already started, so Phase 3 avoids pretending they are safe to replay.
-
-## Tests and quality
+## Quality gate
 
 ```bash
 make quality
+PYTHONPATH=src python -m compileall -q src scripts tests
 ```
 
-The Phase-3 test suite covers membership merge rules, self-refutation, tombstones, cluster codecs, consistent hashing, peer retry/circuit-breaker boundaries, routing/failover, failure detection, gossip, bootstrap/control handling, three-node convergence, failure detection, node rejoin, and control-plane isolation under task rate limiting.
+The normal pytest suite skips the tests that require a live etcd service unless explicitly enabled. Run the required real-etcd gate with:
 
-## Release gate
+```bash
+make phase5-etcd-integration
+```
 
-Create `v0.3.0` only after:
+That target starts the pinned local etcd container, forces the live-etcd tests to run, and tears the container down afterward.
+
+## Development certificates
+
+Generate the local development PKI:
+
+```bash
+make phase5-certs
+```
+
+Generated material lives under `certs/generated/` and is ignored by Git. The generated CA/private keys are **development only**.
+
+## Secure three-node validation
+
+The complete managed system validation is:
+
+```bash
+make phase5-secure-smoke
+```
+
+It owns its temporary certificates, databases, node processes, and etcd container. The expected final marker is:
 
 ```text
-all Phase-1 tests pass
-all Phase-2 tests pass
-all Phase-3 tests pass
-Ruff passes
-Black passes
-mypy passes
-three-node smoke passes
-managed failure/failover/rejoin smoke passes
-ports 18000/18001/18002 are free after shutdown
+PHASE5_SMOKE=PASS
 ```
 
-See:
+The smoke covers:
 
-- `docs/superpowers/specs/2026-09-13-phase3-distributed-cluster-design.md`
-- `docs/superpowers/plans/2026-09-13-phase3-distributed-cluster.md`
-- `docs/PHASE3_FILE_MANIFEST.md`
-- `docs/PHASE3_VERIFICATION.md`
+- three-node mTLS startup,
+- durable GCounter/PNCounter/ORSet/MVRegister operations,
+- SQLite schema/identity verification,
+- unknown-CA rejection,
+- wrong-node certificate identity rejection,
+- plaintext-to-TLS rejection,
+- node restart with the same durable causal actor and a new SWIM epoch,
+- stale-state reconciliation,
+- data-plane operation during an etcd outage,
+- lease/member registration recovery after etcd returns.
 
-# Phase 4 — Causal Consistency & CRDT Replication
-
-Phase 4 layers a primary-less causally consistent CRDT data plane on top of the Phase-3 SWIM-lite cluster and consistent-hash ring.
-
-```text
-SWIM membership
-      |
-      v
-consistent-hash replica set
-      |
-      v
-VersionVector + incarnation-scoped Dot
-      |
-      v
-GCounter / PNCounter / ORSet / MVRegister
-      |
-      +--> local-first mutation
-      |      |
-      |      v
-      |   bounded coalescing outbox
-      |      |
-      |      v
-      |   async state replication
-      |
-      +--> targeted causal read/write repair
-      |
-      +--> digest-driven anti-entropy
-             |
-             v
-          convergence
-```
-
-## Phase-4 guarantees
-
-A client carries a session-wide `CausalToken` backed by an incarnation-scoped VersionVector. A replica serves a tokened read only when its causal knowledge dominates that token; otherwise it performs bounded parallel repair from the current replica set and returns `CAUSAL_UNAVAILABLE` if the frontier cannot be satisfied before the shared request deadline.
-
-The Phase-4 API demonstrates:
-
-- read-your-writes,
-- monotonic reads,
-- monotonic writes,
-- writes-follow-reads,
-- cross-key causal dependencies,
-- concurrent-update preservation,
-- eventual CRDT convergence for state retained by at least one replica.
-
-It does **not** claim durable acknowledgement, quorum consistency, exactly-once execution, transactions, or disk persistence. A locally acknowledged write can be lost if the only process that learned it dies before another replica receives it.
-
-## CRDT client example
-
-```python
-import asyncio
-
-from distsys.crdt_client import CrdtClient
-
-
-async def main() -> None:
-    client = CrdtClient(host="127.0.0.1", port=18000)
-
-    views = await client.increment("page.views", amount=1)
-    tags = await client.add(
-        "user:42:tags",
-        "distributed-systems",
-        causal_token=views.causal_token,
-    )
-    status = await client.write_register(
-        "user:42:status",
-        {"risk": "medium"},
-        causal_token=tags.causal_token,
-    )
-
-    result = await client.read(
-        "user:42:status",
-        causal_token=status.causal_token,
-    )
-    print(result.value)
-    print(result.served_by)
-    print(result.repair_performed)
-
-
-asyncio.run(main())
-```
-
-## Phase-4 local cluster
+## Manual Phase-5 cluster
 
 Terminal 1:
 
 ```bash
-make phase4-cluster
+make phase5-certs
+make phase5-cluster
 ```
 
 Terminal 2:
 
 ```bash
-make phase4-smoke
+make phase5-smoke
 ```
 
-Managed failure/rejoin verification:
+Optional managed checks while the launcher is running:
 
 ```bash
-python scripts/phase4_smoke.py \
-  --host 127.0.0.1 \
-  --ports 18000 18001 18002 \
-  --managed-command 'bash scripts/run_phase4_cluster.sh'
+make phase5-restart-smoke
+make phase5-etcd-smoke
 ```
 
-The launcher refuses to start when any required port is already occupied and only cleans up child processes it launched itself.
-
-## Phase-4 flow
+## Main source layout
 
 ```text
-CRDT_MUTATE_REQUEST
-    -> any-node ingress
-    -> current consistent-hash replica set
-    -> targeted causal repair if required
-    -> reserve/coalesce replication outbox
-    -> allocate incarnation-scoped Dot
-    -> mutate local CRDT state
-    -> commit in-memory state
-    -> publish latest state snapshot to outbox
-    -> return success + CausalToken
-
-CRDT_READ_REQUEST
-    -> local causal dominance check
-    -> fast-path serve when satisfied
-    -> otherwise parallel targeted replica fetch
-    -> CRDT state/context merge
-    -> serve only if requested frontier is satisfied
-
-CRDT_REPLICATE / CRDT_FETCH / CRDT_DIGEST
-    -> peer data/control path
-    -> bypass public task token bucket
+src/distsys/
+├── causal/          dotted/version-vector causal metadata
+├── crdt/            GCounter, PNCounter, ORSet, MVRegister
+├── storage/         in-memory state contracts
+├── replication/     fan-out, causal repair, anti-entropy
+├── persistence/     SQLite repository, codec, migrations, executor, backup
+├── coordination/    etcd adapter, leases, discovery
+├── security/        TLS contexts and certificate identity verification
+├── recovery/        restore and reconciliation orchestration
+├── health/          readiness/coordination/cluster health state
+├── crdt_service.py
+├── crdt_client.py
+└── node.py
 ```
 
-## Phase-4 configuration
+## Protocol compatibility
+
+Phase-5 error codes append to the existing values without renumbering earlier releases:
 
 ```text
-CRDT_ENABLED=false
-CRDT_REPLICATION_FACTOR=3
-CRDT_REPLICATION_QUEUE_CAPACITY=500
-CRDT_REPLICATION_WORKERS=2
-CRDT_REPLICATION_RETRY_MAX_ATTEMPTS=3
-CRDT_REPLICATION_RETRY_BASE_DELAY_SECONDS=0.05
-CRDT_REPLICATION_RETRY_MAX_DELAY_SECONDS=1.0
-CRDT_ANTI_ENTROPY_INTERVAL_SECONDS=2.0
-CRDT_ANTI_ENTROPY_BATCH_SIZE=100
+12 PERSISTENCE_UNAVAILABLE
+13 PERSISTENCE_BACKPRESSURE
+14 RECOVERY_IN_PROGRESS
+15 COORDINATION_UNAVAILABLE
+16 TLS_AUTHENTICATION_FAILED
 ```
 
-`CRDT_ENABLED=true` requires `CLUSTER_ENABLED=true`.
+Existing `MessageType` values 1–18 and `ErrorCode` values 0–11 remain unchanged.
 
-## Phase-4 release gate
+## Project progression
 
-Before creating `v0.4.0`:
+See [`docs/PHASES.md`](docs/PHASES.md) for the complete Phase 1–7 roadmap and [`docs/PHASE5_VERIFICATION.md`](docs/PHASE5_VERIFICATION.md) for the Phase-5 release gate.
 
-```bash
-make proto
-make quality
-PYTHONPATH=src python -m compileall -q src scripts tests
-make phase4-cluster
-# second terminal
-make phase4-smoke
-```
+## Explicit non-goals for Phase 5
 
-Then run the managed failure/rejoin smoke. Tag only after the Phase-4 branch is merged to `main` and the same quality/smoke gates pass on merged `main`.
+- Raft/consensus
+- linearizable writes
+- cross-key ACID transactions
+- exactly-once execution
+- durable replication outbox
+- persisted idempotency-key deduplication
+- distributed ORSet tombstone GC
+- live certificate rotation
+- user authentication/RBAC
+- Kubernetes/Terraform
+- full chaos campaign
+
+Those belong to later phases rather than being hidden behind misleading claims in `v0.5.0`.

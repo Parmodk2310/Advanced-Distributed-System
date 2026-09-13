@@ -10,7 +10,8 @@ from distsys.causal import VersionVector
 from distsys.cluster.member import ClusterMember
 from distsys.replication.replica_selector import ReplicaSelector
 from distsys.resilience.deadline import Deadline, DeadlineExceeded
-from distsys.storage import CrdtStore, StoredCrdtEntry
+from distsys.storage import StoredCrdtEntry
+from distsys.storage.protocol import CrdtStateStore
 
 
 class CausalUnavailableError(RuntimeError):
@@ -45,7 +46,7 @@ class CausalRepairService:
     def __init__(
         self,
         local_node_id: str,
-        store: CrdtStore,
+        store: CrdtStateStore,
         selector: ReplicaSelector,
         peer: CausalRepairPeer,
     ) -> None:

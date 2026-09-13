@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import ssl
 import uuid
 from typing import Any
 
@@ -25,6 +26,8 @@ from distsys.protocol.message import Message, MessageType
 from distsys.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
 from distsys.resilience.deadline import Deadline, DeadlineExceeded
 from distsys.resilience.retry import RetryPolicy, retry_async
+from distsys.security.errors import TlsPeerIdentityError
+from distsys.security.identity import verify_node_identity
 
 logger = logging.getLogger("distsys.cluster.peer_client")
 
@@ -58,12 +61,14 @@ class PeerClient:
         circuit_breaker_failure_threshold: int,
         circuit_breaker_recovery_seconds: float,
         max_frame_size: int = DEFAULT_MAX_FRAME_SIZE,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self.local_node_id = local_node_id
         self.retry_policy = retry_policy
         self.circuit_breaker_failure_threshold = circuit_breaker_failure_threshold
         self.circuit_breaker_recovery_seconds = circuit_breaker_recovery_seconds
         self.max_frame_size = max_frame_size
+        self.ssl_context = ssl_context
         self._breakers: dict[str, CircuitBreaker] = {}
 
     def breaker_for(self, node_id: str) -> CircuitBreaker:
@@ -83,11 +88,26 @@ class PeerClient:
         message: Message,
         *,
         timeout_seconds: float,
+        expected_node_id: str | None = None,
     ) -> Message:
         if timeout_seconds <= 0:
             raise TimeoutError("peer exchange timeout exhausted")
         async with asyncio.timeout(timeout_seconds):
-            reader, writer = await asyncio.open_connection(host, port)
+            if self.ssl_context is None:
+                reader, writer = await asyncio.open_connection(host, port)
+            else:
+                if expected_node_id is None:
+                    raise TlsPeerIdentityError("secure peer connection requires expected node id")
+                reader, writer = await asyncio.open_connection(
+                    host,
+                    port,
+                    ssl=self.ssl_context,
+                    server_hostname=expected_node_id,
+                )
+                ssl_object = writer.get_extra_info("ssl_object")
+                if ssl_object is None:
+                    raise TlsPeerIdentityError("TLS peer did not expose an SSL object")
+                verify_node_identity(ssl_object.getpeercert(), expected_node_id)
             try:
                 writer.write(encode_frame(message, max_frame_size=self.max_frame_size))
                 await writer.drain()
@@ -96,7 +116,7 @@ class PeerClient:
                 writer.close()
                 try:
                     await writer.wait_closed()
-                except ConnectionError:
+                except (ConnectionError, ssl.SSLError):
                     pass
         if response.correlation_id != message.correlation_id:
             raise PeerProtocolError(
@@ -116,8 +136,11 @@ class PeerClient:
             payload=encode_join_request(local_member),
             msg_type=MessageType.JOIN_REQUEST,
         )
+        if self.ssl_context is not None and seed.node_id is None:
+            raise TlsPeerIdentityError("secure cluster join requires an identity-aware seed")
+        kwargs = {"expected_node_id": seed.node_id} if self.ssl_context is not None else {}
         response = await self._exchange_endpoint(
-            seed.host, seed.port, request, timeout_seconds=timeout_seconds
+            seed.host, seed.port, request, timeout_seconds=timeout_seconds, **kwargs
         )
         if response.msg_type is not MessageType.JOIN_RESPONSE:
             raise PeerProtocolError(f"expected JOIN_RESPONSE, got {response.msg_type.name}")
@@ -135,8 +158,9 @@ class PeerClient:
             payload=encode_ping(gossip),
             msg_type=MessageType.PING,
         )
+        kwargs = {"expected_node_id": peer.node_id} if self.ssl_context is not None else {}
         response = await self._exchange_endpoint(
-            peer.host, peer.port, request, timeout_seconds=timeout_seconds
+            peer.host, peer.port, request, timeout_seconds=timeout_seconds, **kwargs
         )
         if response.msg_type is not MessageType.ACK:
             raise PeerProtocolError(f"expected ACK, got {response.msg_type.name}")
@@ -155,8 +179,9 @@ class PeerClient:
             payload=encode_ping_request(target=target, gossip=gossip),
             msg_type=MessageType.PING_REQ,
         )
+        kwargs = {"expected_node_id": helper.node_id} if self.ssl_context is not None else {}
         response = await self._exchange_endpoint(
-            helper.host, helper.port, request, timeout_seconds=timeout_seconds
+            helper.host, helper.port, request, timeout_seconds=timeout_seconds, **kwargs
         )
         if response.msg_type is not MessageType.ACK:
             raise PeerProtocolError(f"expected ACK, got {response.msg_type.name}")
@@ -174,8 +199,9 @@ class PeerClient:
             payload=encode_gossip(members),
             msg_type=MessageType.GOSSIP,
         )
+        kwargs = {"expected_node_id": peer.node_id} if self.ssl_context is not None else {}
         response = await self._exchange_endpoint(
-            peer.host, peer.port, request, timeout_seconds=timeout_seconds
+            peer.host, peer.port, request, timeout_seconds=timeout_seconds, **kwargs
         )
         if response.msg_type is not MessageType.ACK:
             raise PeerProtocolError(f"expected ACK, got {response.msg_type.name}")
@@ -226,6 +252,7 @@ class PeerClient:
                     peer.port,
                     request,
                     timeout_seconds=deadline.remaining(),
+                    **({"expected_node_id": peer.node_id} if self.ssl_context is not None else {}),
                 )
             )
 

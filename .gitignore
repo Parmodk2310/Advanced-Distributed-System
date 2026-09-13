@@ -19,3 +19,10 @@ certs/*.pem
 .phase3-logs/
 
 .phase4-logs/
+
+# Phase 5 runtime state
+certs/generated/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+.phase5-logs/

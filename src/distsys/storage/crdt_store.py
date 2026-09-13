@@ -24,6 +24,20 @@ def _merge_state(left: CrdtState, right: CrdtState) -> CrdtState:
     raise TypeError("unsupported CRDT state type")
 
 
+def merge_entries(left: StoredCrdtEntry, right: StoredCrdtEntry) -> StoredCrdtEntry:
+    if left.key != right.key:
+        raise ValueError("cannot merge entries with different keys")
+    if left.crdt_type is not right.crdt_type:
+        raise TypeError("cannot merge different CRDT types for one key")
+    return StoredCrdtEntry(
+        key=left.key,
+        crdt_type=left.crdt_type,
+        state=_merge_state(left.state, right.state),
+        state_version=left.state_version.merge(right.state_version),
+        causal_context=left.causal_context.merge(right.causal_context),
+    )
+
+
 class CrdtStore:
     def __init__(self) -> None:
         self._entries: dict[str, StoredCrdtEntry] = {}
@@ -84,15 +98,7 @@ class CrdtStore:
             existing = await self.get(incoming.key)
             if existing is None:
                 return await self.replace(incoming)
-            if existing.crdt_type is not incoming.crdt_type:
-                raise TypeError("cannot merge different CRDT types for one key")
-            merged = StoredCrdtEntry(
-                key=incoming.key,
-                crdt_type=existing.crdt_type,
-                state=_merge_state(existing.state, incoming.state),
-                state_version=existing.state_version.merge(incoming.state_version),
-                causal_context=existing.causal_context.merge(incoming.causal_context),
-            )
+            merged = merge_entries(existing, incoming)
             return await self.replace(merged, expected_type=existing.crdt_type)
 
     async def merge_metadata(self, key: str, causal_context) -> StoredCrdtEntry | None:
