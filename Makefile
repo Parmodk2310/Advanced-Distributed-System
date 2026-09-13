@@ -1,6 +1,9 @@
 PYTHON ?= python
 
-.PHONY: install install-dev proto test lint format quality run smoke phase2-smoke phase3-cluster phase3-smoke phase4-cluster phase4-smoke
+.PHONY: install install-dev proto test lint format quality run smoke phase2-smoke \
+	phase3-cluster phase3-smoke phase4-cluster phase4-smoke \
+	phase5-certs phase5-etcd-up phase5-etcd-down phase5-etcd-integration \
+	phase5-cluster phase5-smoke phase5-restart-smoke phase5-etcd-smoke phase5-secure-smoke
 
 install:
 	$(PYTHON) -m pip install -e .
@@ -50,3 +53,44 @@ phase4-cluster:
 
 phase4-smoke:
 	$(PYTHON) scripts/phase4_smoke.py --host 127.0.0.1 --ports 18000 18001 18002
+
+phase5-certs:
+	bash scripts/generate_dev_certs.sh certs/generated
+
+phase5-etcd-up:
+	docker compose -f docker/etcd/docker-compose.yml up -d
+
+phase5-etcd-down:
+	docker compose -f docker/etcd/docker-compose.yml down -v
+
+phase5-etcd-integration:
+	bash -c 'set -euo pipefail; \
+		trap "docker compose -f docker/etcd/docker-compose.yml down -v >/dev/null 2>&1 || true" EXIT; \
+		docker compose -f docker/etcd/docker-compose.yml up -d; \
+		for i in $$(seq 1 60); do \
+			docker compose -f docker/etcd/docker-compose.yml exec -T etcd etcdctl --endpoints=http://127.0.0.1:2379 endpoint health >/dev/null 2>&1 && break; \
+			sleep 0.5; \
+		done; \
+		RUN_ETCD_INTEGRATION=1 PYTHONPATH=src $(PYTHON) -m pytest -q \
+			tests/integration/test_etcd_registration.py \
+			tests/integration/test_etcd_lease_expiry.py \
+			tests/integration/test_etcd_outage.py'
+
+phase5-cluster:
+	bash scripts/run_phase5_cluster.sh
+
+phase5-smoke:
+	PYTHONPATH=src $(PYTHON) scripts/phase5_smoke.py \
+		--cert-dir certs/generated \
+		--data-dir .phase5-logs/data
+
+phase5-restart-smoke:
+	PYTHONPATH=src $(PYTHON) scripts/phase5_restart_smoke.py \
+		--log-dir .phase5-logs \
+		--cert-dir certs/generated
+
+phase5-etcd-smoke:
+	PYTHONPATH=src $(PYTHON) scripts/phase5_etcd_smoke.py --cert-dir certs/generated
+
+phase5-secure-smoke:
+	bash scripts/phase5_verify.sh

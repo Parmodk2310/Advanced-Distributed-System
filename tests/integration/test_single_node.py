@@ -1,7 +1,6 @@
 import asyncio
 
 import pytest
-import pytest_asyncio
 
 from distsys.client import DistributedClient, RemoteTaskError
 from distsys.cluster.codec import encode_ping
@@ -13,20 +12,43 @@ from distsys.protocol.message import Message, MessageType
 from distsys.utils.config import Settings
 
 
-@pytest_asyncio.fixture(loop_scope="function")
-async def running_node(unused_tcp_port):
-    node = DistributedNode(
-        Settings(
-            node_id="node-test",
-            host="127.0.0.1",
-            port=unused_tcp_port,
-        )
-    )
+async def _wait_until_listening(node: DistributedNode, timeout_seconds: float = 2.0) -> None:
+    """Wait for WSL localhost forwarding to expose a newly bound port."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout_seconds
+    while True:
+        try:
+            reader, writer = await asyncio.open_connection(
+                node.settings.host,
+                node.bound_port,
+            )
+        except ConnectionRefusedError:
+            if loop.time() >= deadline:
+                raise
+            await asyncio.sleep(0.02)
+            continue
+
+        del reader
+        writer.close()
+        await writer.wait_closed()
+        return
+
+
+@pytest.fixture
+async def running_node():
+    node = DistributedNode(Settings(node_id="node-test", host="127.0.0.1", port=0))
     await node.start()
+    await _wait_until_listening(node)
     try:
         yield node
     finally:
         await node.stop()
+
+
+@pytest.mark.asyncio
+async def test_running_node_uses_kernel_assigned_port(running_node):
+    assert running_node.settings.port == 0
+    assert running_node.bound_port > 0
 
 
 @pytest.mark.asyncio
@@ -46,13 +68,27 @@ async def test_unknown_task_returns_structured_error(running_node):
 
 @pytest.mark.asyncio
 async def test_multiple_clients(running_node):
+    # Keep the test concurrent while avoiding a 50-SYN burst through WSL's
+    # localhost forwarding layer. A transient refusal is retried only while
+    # the in-process server still reports itself as serving.
+    concurrency = asyncio.Semaphore(8)
+
     async def one(index: int):
-        client = DistributedClient(
-            port=running_node.bound_port,
-            client_id=f"client-{index}",
-        )
-        payload = {"index": index}
-        return await client.request("echo", payload)
+        async with concurrency:
+            client = DistributedClient(
+                port=running_node.bound_port,
+                client_id=f"client-{index}",
+            )
+            payload = {"index": index}
+            for attempt in range(5):
+                try:
+                    return await client.request("echo", payload)
+                except ConnectionRefusedError:
+                    assert running_node.is_running
+                    if attempt == 4:
+                        raise
+                    await asyncio.sleep(0.02)
+        raise AssertionError("unreachable")
 
     results = await asyncio.gather(*(one(index) for index in range(50)))
     assert results == [{"index": index} for index in range(50)]
@@ -62,8 +98,13 @@ async def test_multiple_clients(running_node):
 async def test_clean_stop(running_node):
     port = running_node.bound_port
     await running_node.stop()
-    with pytest.raises((ConnectionRefusedError, OSError)):
-        await asyncio.open_connection("127.0.0.1", port)
+    assert not running_node.is_running
+
+    # Rebinding proves the Linux listener was released without depending on
+    # WSL/Windows localhost-forwarding teardown timing.
+    rebound = await asyncio.start_server(lambda _r, w: w.close(), "127.0.0.1", port)
+    rebound.close()
+    await rebound.wait_closed()
 
 
 @pytest.mark.asyncio
@@ -79,11 +120,12 @@ async def test_persistent_connection_multiple_requests(running_node):
 
 
 @pytest.mark.asyncio
-async def test_routing_key_is_ignored_when_cluster_mode_is_disabled(unused_tcp_port):
-    node = DistributedNode(Settings(node_id="standalone", host="127.0.0.1", port=unused_tcp_port))
+async def test_routing_key_is_ignored_when_cluster_mode_is_disabled():
+    node = DistributedNode(Settings(node_id="standalone", host="127.0.0.1", port=0))
     await node.start()
+    await _wait_until_listening(node)
     try:
-        client = DistributedClient(port=unused_tcp_port)
+        client = DistributedClient(port=node.bound_port)
         result = await client.request(
             "echo",
             {"message": "local"},
@@ -95,13 +137,12 @@ async def test_routing_key_is_ignored_when_cluster_mode_is_disabled(unused_tcp_p
 
 
 @pytest.mark.asyncio
-async def test_cluster_control_is_rejected_when_cluster_mode_is_disabled(
-    unused_tcp_port,
-):
-    node = DistributedNode(Settings(node_id="standalone", host="127.0.0.1", port=unused_tcp_port))
+async def test_cluster_control_is_rejected_when_cluster_mode_is_disabled():
+    node = DistributedNode(Settings(node_id="standalone", host="127.0.0.1", port=0))
     await node.start()
+    await _wait_until_listening(node)
     try:
-        reader, writer = await asyncio.open_connection("127.0.0.1", unused_tcp_port)
+        reader, writer = await asyncio.open_connection("127.0.0.1", node.bound_port)
         request = Message.new_request(
             sender_id="node-1",
             msg_type=MessageType.PING,
@@ -122,11 +163,12 @@ async def test_cluster_control_is_rejected_when_cluster_mode_is_disabled(
 
 
 @pytest.mark.asyncio
-async def test_cluster_whoami_reports_local_node_identity(unused_tcp_port):
-    node = DistributedNode(Settings(node_id="standalone", host="127.0.0.1", port=unused_tcp_port))
+async def test_cluster_whoami_reports_local_node_identity():
+    node = DistributedNode(Settings(node_id="standalone", host="127.0.0.1", port=0))
     await node.start()
+    await _wait_until_listening(node)
     try:
-        client = DistributedClient(port=unused_tcp_port)
+        client = DistributedClient(port=node.bound_port)
         assert await client.request("cluster.whoami", {}) == {"node_id": "standalone"}
     finally:
         await node.stop()

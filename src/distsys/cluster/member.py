@@ -36,6 +36,7 @@ class ClusterMember:
 class SeedAddress:
     host: str
     port: int
+    node_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.host:
@@ -48,7 +49,14 @@ class SeedAddress:
         value = raw.strip()
         if not value or ":" not in value:
             raise ValueError(f"invalid seed address: {raw!r}")
-        host, raw_port = value.rsplit(":", 1)
+        endpoint = value
+        node_id: str | None = None
+        if "@" in value:
+            raw_node_id, endpoint = value.split("@", 1)
+            node_id = raw_node_id.strip()
+            if not node_id:
+                raise ValueError("seed node_id is required")
+        host, raw_port = endpoint.rsplit(":", 1)
         host = host.strip()
         if not host:
             raise ValueError("seed host is required")
@@ -56,7 +64,7 @@ class SeedAddress:
             port = int(raw_port)
         except ValueError as exc:
             raise ValueError(f"invalid seed port: {raw_port!r}") from exc
-        return cls(host=host, port=port)
+        return cls(host=host, port=port, node_id=node_id)
 
 
 def fresh_incarnation() -> int:

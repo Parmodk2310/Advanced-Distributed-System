@@ -21,6 +21,11 @@ class ErrorCode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CAUSAL_UNAVAILABLE: _ClassVar[ErrorCode]
     REPLICATION_BACKPRESSURE: _ClassVar[ErrorCode]
     KEY_NOT_FOUND: _ClassVar[ErrorCode]
+    PERSISTENCE_UNAVAILABLE: _ClassVar[ErrorCode]
+    PERSISTENCE_BACKPRESSURE: _ClassVar[ErrorCode]
+    RECOVERY_IN_PROGRESS: _ClassVar[ErrorCode]
+    COORDINATION_UNAVAILABLE: _ClassVar[ErrorCode]
+    TLS_AUTHENTICATION_FAILED: _ClassVar[ErrorCode]
 
 class MemberStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -48,6 +53,11 @@ PEER_UNAVAILABLE: ErrorCode
 CAUSAL_UNAVAILABLE: ErrorCode
 REPLICATION_BACKPRESSURE: ErrorCode
 KEY_NOT_FOUND: ErrorCode
+PERSISTENCE_UNAVAILABLE: ErrorCode
+PERSISTENCE_BACKPRESSURE: ErrorCode
+RECOVERY_IN_PROGRESS: ErrorCode
+COORDINATION_UNAVAILABLE: ErrorCode
+TLS_AUTHENTICATION_FAILED: ErrorCode
 MEMBER_STATUS_UNSPECIFIED: MemberStatus
 ALIVE: MemberStatus
 SUSPECT: MemberStatus

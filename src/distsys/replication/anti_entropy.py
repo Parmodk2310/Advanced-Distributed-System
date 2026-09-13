@@ -7,13 +7,15 @@ import inspect
 import logging
 import random
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from typing import Protocol
 
 from distsys.causal import VersionVector
 from distsys.cluster.member import ClusterMember, MemberStatus
 from distsys.replication.digest import CrdtDigestEntry, DigestRelation, compare_digest
 from distsys.replication.replica_selector import ReplicaSelector
-from distsys.storage import CrdtStore, StoredCrdtEntry
+from distsys.storage import StoredCrdtEntry
+from distsys.storage.protocol import CrdtStateStore
 
 logger = logging.getLogger("distsys.replication.anti_entropy")
 
@@ -41,11 +43,18 @@ PeerProvider = Callable[[], tuple[ClusterMember, ...] | Awaitable[tuple[ClusterM
 PeerChooser = Callable[[Sequence[ClusterMember]], ClusterMember]
 
 
+@dataclass(frozen=True, slots=True)
+class ReconcileStats:
+    keys_checked: int = 0
+    repairs: int = 0
+    failures: int = 0
+
+
 class AntiEntropyService:
     def __init__(
         self,
         local_node_id: str,
-        store: CrdtStore,
+        store: CrdtStateStore,
         selector: ReplicaSelector,
         peer: AntiEntropyPeer,
         *,
@@ -91,12 +100,13 @@ class AntiEntropyService:
         ]
         return tuple(relevant[: self.batch_size])
 
-    async def run_once(self) -> None:
-        peers = await self._peers()
-        if not peers:
-            return
-        target = self.peer_chooser(peers)
-        local_digest = await self._local_digest_for(target.node_id)
+    async def _reconcile_digest(
+        self,
+        target: ClusterMember,
+        local_digest: tuple[CrdtDigestEntry, ...],
+        *,
+        limit: int | None = None,
+    ) -> ReconcileStats:
         try:
             remote_digest = await self.peer.exchange_digest(target, local_digest)
         except (ConnectionError, TimeoutError, OSError):
@@ -104,7 +114,7 @@ class AntiEntropyService:
                 "anti entropy digest failed",
                 extra={"event": "anti_entropy_digest_failed", "peer_id": target.node_id},
             )
-            return
+            return ReconcileStats(failures=1)
 
         local_map = {item.key: item for item in local_digest}
         remote_map = {
@@ -112,19 +122,25 @@ class AntiEntropyService:
             for item in remote_digest
             if self._shared_replica(item.key, target.node_id)
         }
+        all_keys = sorted(set(local_map) | set(remote_map))
+        if limit is not None:
+            all_keys = all_keys[:limit]
 
-        for key in sorted(set(local_map) | set(remote_map))[: self.batch_size]:
+        repairs = 0
+        for key in all_keys:
             local = local_map.get(key)
             remote = remote_map.get(key)
             if local is None and remote is not None:
                 state = await self.peer.fetch_state(target, key)
                 if state is not None:
                     await self.store.merge_entry(state)
+                    repairs += 1
                 continue
             if local is not None and remote is None:
                 state = await self.store.get(key)
                 if state is not None:
                     await self.peer.send_state(target, state)
+                    repairs += 1
                 continue
             assert local is not None and remote is not None
             relation = compare_digest(local, remote)
@@ -134,16 +150,19 @@ class AntiEntropyService:
                 merged_context = local.causal_context.merge(remote.causal_context)
                 await self.store.merge_metadata(key, merged_context)
                 await self.peer.send_metadata(target, key, merged_context)
+                repairs += 1
                 continue
             if relation is DigestRelation.LOCAL_AHEAD:
                 state = await self.store.get(key)
                 if state is not None:
                     await self.peer.send_state(target, state)
+                    repairs += 1
                 continue
             if relation is DigestRelation.REMOTE_AHEAD:
                 state = await self.peer.fetch_state(target, key)
                 if state is not None:
                     await self.store.merge_entry(state)
+                    repairs += 1
                 continue
             if relation is DigestRelation.CONCURRENT:
                 state = await self.peer.fetch_state(target, key)
@@ -151,6 +170,31 @@ class AntiEntropyService:
                     continue
                 merged = await self.store.merge_entry(state)
                 await self.peer.send_state(target, merged)
+                repairs += 1
+        return ReconcileStats(keys_checked=len(all_keys), repairs=repairs)
+
+    async def reconcile_peer(
+        self,
+        target: ClusterMember,
+        keys: tuple[str, ...] | None = None,
+    ) -> ReconcileStats:
+        entries = await self.store.snapshot_all()
+        key_filter = None if keys is None else set(keys)
+        local_digest = tuple(
+            CrdtDigestEntry.from_entry(entry)
+            for entry in entries
+            if self._shared_replica(entry.key, target.node_id)
+            and (key_filter is None or entry.key in key_filter)
+        )
+        return await self._reconcile_digest(target, local_digest)
+
+    async def run_once(self) -> None:
+        peers = await self._peers()
+        if not peers:
+            return
+        target = self.peer_chooser(peers)
+        local_digest = await self._local_digest_for(target.node_id)
+        await self._reconcile_digest(target, local_digest, limit=self.batch_size)
 
     async def start(self) -> None:
         if self._task is not None:

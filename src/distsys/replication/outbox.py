@@ -34,6 +34,7 @@ class _Pending:
     state: StoredCrdtEntry | None = None
     queued: bool = False
     in_flight: bool = False
+    reservations: int = 0
 
 
 class ReplicationOutbox:
@@ -53,13 +54,24 @@ class ReplicationOutbox:
                 raise ReplicationBackpressureError("replication outbox capacity exhausted")
             for pair in new_pairs:
                 self._pending[pair] = _Pending()
+            for pair in unique:
+                self._pending[pair].reservations += 1
             return OutboxReservation(unique, new_pairs)
 
     async def cancel(self, reservation: OutboxReservation) -> None:
         async with self._lock:
-            for pair in reservation.created_pairs:
+            for pair in reservation.pairs:
                 current = self._pending.get(pair)
-                if current is not None and current.generation == 0 and current.state is None:
+                if current is None:
+                    continue
+                if current.reservations > 0:
+                    current.reservations -= 1
+                if (
+                    current.reservations == 0
+                    and current.state is None
+                    and not current.queued
+                    and not current.in_flight
+                ):
                     self._pending.pop(pair, None)
 
     async def publish(
@@ -76,10 +88,11 @@ class ReplicationOutbox:
                 if state is None:
                     raise KeyError(f"missing published state for key {key!r}")
                 current = self._pending.get(pair)
-                if current is None:
+                if current is None or current.reservations < 1:
                     raise RuntimeError("outbox reservation no longer exists")
                 current.generation += 1
                 current.state = state
+                current.reservations -= 1
                 if not current.queued and not current.in_flight:
                     current.queued = True
                     to_queue.append(pair)
@@ -112,7 +125,11 @@ class ReplicationOutbox:
                 return
             current.in_flight = False
             if current.generation == sent_generation:
-                self._pending.pop(pair, None)
+                if current.reservations == 0:
+                    self._pending.pop(pair, None)
+                else:
+                    current.state = None
+                    current.queued = False
             elif not current.queued:
                 current.queued = True
                 requeue = True
@@ -128,7 +145,11 @@ class ReplicationOutbox:
                 return
             current.in_flight = False
             if current.generation == sent_generation:
-                self._pending.pop(pair, None)
+                if current.reservations == 0:
+                    self._pending.pop(pair, None)
+                else:
+                    current.state = None
+                    current.queued = False
             elif not current.queued:
                 current.queued = True
                 requeue = True

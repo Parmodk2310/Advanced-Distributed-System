@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ssl
 from dataclasses import dataclass
 from typing import Any
 
@@ -52,12 +53,16 @@ class CrdtClient:
         client_id: str = "crdt-client",
         timeout_seconds: float = 5.0,
         max_frame_size: int = DEFAULT_MAX_FRAME_SIZE,
+        ssl_context: ssl.SSLContext | None = None,
+        server_hostname: str | None = None,
     ) -> None:
         self.host = host
         self.port = port
         self.client_id = client_id
         self.timeout_seconds = timeout_seconds
         self.max_frame_size = max_frame_size
+        self.ssl_context = ssl_context
+        self.server_hostname = server_hostname
         self.causal_token = CausalToken.empty()
 
     def _token(self, explicit: CausalToken | None) -> CausalToken:
@@ -76,7 +81,12 @@ class CrdtClient:
             payload=payload,
         )
         reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(self.host, self.port),
+            asyncio.open_connection(
+                self.host,
+                self.port,
+                ssl=self.ssl_context,
+                server_hostname=self.server_hostname if self.ssl_context is not None else None,
+            ),
             timeout=self.timeout_seconds,
         )
         try:

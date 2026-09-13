@@ -1,3 +1,6 @@
+import asyncio
+import ssl
+
 import pytest
 
 from distsys.cluster.member import ClusterMember, MemberStatus
@@ -184,3 +187,58 @@ async def test_control_ping_is_single_attempt_without_task_retry():
         await client.ping(member(), (), timeout_seconds=0.1)
 
     assert client.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_secure_join_requires_identity_aware_seed():
+    from distsys.cluster.member import SeedAddress
+    from distsys.security.errors import TlsPeerIdentityError
+
+    client = PeerClient(
+        local_node_id="node-0",
+        retry_policy=RetryPolicy(max_attempts=1, base_delay_seconds=0, max_delay_seconds=0),
+        circuit_breaker_failure_threshold=2,
+        circuit_breaker_recovery_seconds=1,
+        ssl_context=object(),  # type: ignore[arg-type]
+    )
+    with pytest.raises(TlsPeerIdentityError):
+        await client.join(
+            SeedAddress("127.0.0.1", 18001),
+            member("node-0", 18000),
+            timeout_seconds=0.1,
+        )
+
+
+@pytest.mark.asyncio
+async def test_tls_shutdown_error_does_not_mask_exchange_timeout(monkeypatch):
+    class Reader:
+        async def readexactly(self, size):
+            await asyncio.Future()
+
+    class Writer:
+        def write(self, data):
+            pass
+
+        async def drain(self):
+            pass
+
+        def close(self):
+            pass
+
+        async def wait_closed(self):
+            raise ssl.SSLError("application data after close notify")
+
+    async def open_connection(*args, **kwargs):
+        return Reader(), Writer()
+
+    monkeypatch.setattr(asyncio, "open_connection", open_connection)
+    client = PeerClient(
+        local_node_id="node-0",
+        retry_policy=RetryPolicy(max_attempts=1, base_delay_seconds=0, max_delay_seconds=0),
+        circuit_breaker_failure_threshold=2,
+        circuit_breaker_recovery_seconds=1,
+    )
+
+    request = Message.new_request(sender_id="node-0", msg_type=MessageType.PING, payload=b"")
+    with pytest.raises(TimeoutError):
+        await client._exchange_endpoint("127.0.0.1", 18001, request, timeout_seconds=0.01)

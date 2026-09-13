@@ -93,3 +93,29 @@ async def test_service_merge_replica_state_and_metadata():
     actor = CausalActor("node-1", 1)
     updated = await service.merge_metadata("k", VersionVector({actor: 2}))
     assert updated is not None and updated.causal_context.get(actor) == 2
+
+
+@pytest.mark.asyncio
+async def test_fast_path_start_does_not_start_anti_entropy():
+    members = [member("node-0", 18000), member("node-1", 18001)]
+    ring = ConsistentHashRing(virtual_nodes=8)
+    ring.rebuild(members)
+    peer = Peer()
+    service = ReplicationService(
+        local_node_id="node-0",
+        store=CrdtStore(),
+        ring=ring,
+        replication_factor=2,
+        peer=peer,
+        peer_provider=lambda: tuple(members),
+        queue_capacity=4,
+        worker_count=1,
+        retry_policy=RetryPolicy(max_attempts=1, base_delay_seconds=0, max_delay_seconds=0),
+        anti_entropy_interval_seconds=60,
+        anti_entropy_batch_size=10,
+    )
+    await service.start_fast_path()
+    assert service.anti_entropy._task is None
+    await service.start_anti_entropy()
+    assert service.anti_entropy._task is not None
+    await service.stop()

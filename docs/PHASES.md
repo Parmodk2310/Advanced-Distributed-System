@@ -109,22 +109,35 @@ Implemented/owned:
 
 Exit: client sessions preserve read-your-writes, monotonic reads, monotonic writes, and writes-follow-reads; concurrent ORSet/MVRegister updates converge without clock-based conflict loss; missed replication is repaired by causal fetch or anti-entropy; and restarted replicas rejoin with a new causal actor epoch and reconstruct assigned in-memory state. Phase 4 intentionally does not claim durable acknowledgements, quorum durability, exactly-once execution, transactions, or disk persistence.
 
-## Phase 5 — Security, Persistence & Recovery
+## Phase 5 — Secure Persistence & Recovery
 
-Add:
+Implemented/owned:
 
-- `src/distsys/security/tls.py`
-- `src/distsys/security/identity.py`
-- `src/distsys/storage/repository.py`
-- `src/distsys/storage/etcd.py`
-- `src/distsys/storage/snapshot.py`
-- `certs/generate.sh` (development only; private keys ignored)
-- `tests/integration/test_mtls.py`
-- `tests/integration/test_etcd_recovery.py`
-- `tests/integration/test_restart_restore.py`
-- `tests/integration/test_etcd_degraded_mode.py`
+- `src/distsys/persistence/{models,codec,repository,executor,migrations,sqlite_repository,durable_store,backup}.py`
+- `src/distsys/coordination/{models,client,etcd_client,lease,discovery,service}.py`
+- `src/distsys/security/{tls_context,certificate,identity}.py`
+- `src/distsys/recovery/{restore,reconciliation,coordinator}.py`
+- `src/distsys/health/state.py`
+- durable SQLite/WAL repository with schema v1 and migrations
+- stable node installation UUID and durable causal actor/counter/frontier
+- staged causal allocation and atomic CRDT+causal persistence
+- persist-before-memory remote replication/repair merges
+- bounded persistence admission/backpressure
+- safe SQLite online backup
+- etcd-backed member discovery and lease coordination
+- post-start etcd degradation/recovery without replacing SWIM
+- TLS 1.3 secure listener/client contexts
+- mutual TLS authentication and logical node SAN verification
+- recovery readiness gating and stale-replica reconciliation
+- `scripts/generate_dev_certs.sh`
+- `scripts/run_phase5_cluster.sh`
+- `scripts/phase5_smoke.py`
+- `scripts/phase5_restart_smoke.py`
+- `scripts/phase5_etcd_smoke.py`
+- `scripts/phase5_verify.sh`
+- local etcd Docker Compose topology and live-etcd integration gate
 
-Exit: mTLS authenticates peers, state survives restart, and etcd outage does not crash the request data plane.
+Exit: acknowledged CRDT mutations are locally durable before ACK; the same durable node resumes its causal actor/counter after restart while SWIM uses a fresh process incarnation; stale durable replicas reconcile rather than overwrite newer state; peers use TLS 1.3/mTLS with node identity verification; and a temporary post-ready etcd outage degrades coordination without unnecessarily stopping the existing SWIM/CRDT data plane. Phase 5 still does not claim quorum durability, consensus, linearizability, exactly-once execution, or distributed transactions.
 
 ## Phase 6 — Observability, Chaos & Performance
 

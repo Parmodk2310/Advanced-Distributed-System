@@ -5,11 +5,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, Protocol
+from typing import Any
 
 from distsys.cluster.cluster_router import ClusterRouter
 from distsys.cluster.codec import (
-    AckData,
     decode_gossip,
     decode_join_request,
     decode_ping,
@@ -35,52 +34,6 @@ class ClusterBootstrapError(ConnectionError):
     """Raised when a configured node cannot reach any seed."""
 
 
-class ClusterPeerClient(Protocol):
-    async def join(
-        self,
-        seed: SeedAddress,
-        local_member: ClusterMember,
-        *,
-        timeout_seconds: float,
-    ) -> tuple[ClusterMember, ...]: ...
-
-    async def ping(
-        self,
-        peer: ClusterMember,
-        gossip: tuple[ClusterMember, ...],
-        *,
-        timeout_seconds: float,
-    ) -> AckData: ...
-
-    async def ping_request(
-        self,
-        helper: ClusterMember,
-        target: ClusterMember,
-        gossip: tuple[ClusterMember, ...],
-        *,
-        timeout_seconds: float,
-    ) -> AckData: ...
-
-    async def gossip(
-        self,
-        peer: ClusterMember,
-        members: tuple[ClusterMember, ...],
-        *,
-        timeout_seconds: float,
-    ) -> AckData: ...
-
-    async def forward_task(
-        self,
-        peer: ClusterMember,
-        *,
-        task_name: str,
-        payload: Any,
-        routing_key: str,
-        origin_node_id: str,
-        deadline: Deadline,
-    ) -> Any: ...
-
-
 class ClusterService:
     def __init__(
         self,
@@ -88,10 +41,14 @@ class ClusterService:
         settings: Settings,
         bound_port: int,
         execute_local: Callable[[str, Any, Deadline], Awaitable[Any]],
-        peer_client: ClusterPeerClient | None = None,
+        peer_client: PeerClient | None = None,
         incarnation: int | None = None,
+        bootstrap_seeds: tuple[SeedAddress, ...] | None = None,
     ) -> None:
         self.settings = settings
+        self.bootstrap_seeds = (
+            settings.cluster_seeds if bootstrap_seeds is None else bootstrap_seeds
+        )
         self.local_member = ClusterMember(
             node_id=settings.node_id,
             host=settings.host,
@@ -105,7 +62,7 @@ class ClusterService:
             dead_retention_seconds=settings.cluster_dead_retention_seconds,
         )
         self.ring = ConsistentHashRing(virtual_nodes=settings.cluster_virtual_nodes)
-        self.peer_client: ClusterPeerClient = peer_client or PeerClient(
+        self.peer_client = peer_client or PeerClient(
             local_node_id=settings.node_id,
             retry_policy=RetryPolicy(
                 max_attempts=settings.retry_max_attempts,
@@ -162,11 +119,11 @@ class ClusterService:
 
     async def bootstrap(self) -> None:
         await self.sync_ring()
-        if not self.settings.cluster_seeds:
+        if not self.bootstrap_seeds:
             return
         candidates = [
             seed
-            for seed in self.settings.cluster_seeds
+            for seed in self.bootstrap_seeds
             if not (seed.host == self.local_member.host and seed.port == self.local_member.port)
         ]
         if not candidates:
@@ -177,7 +134,7 @@ class ClusterService:
                 snapshot = await self.peer_client.join(
                     seed,
                     self.local_member,
-                    timeout_seconds=self.settings.cluster_ping_timeout_seconds,
+                    timeout_seconds=self.settings.request_timeout_seconds,
                 )
             except (ConnectionError, TimeoutError, OSError) as exc:
                 failures.append(exc)

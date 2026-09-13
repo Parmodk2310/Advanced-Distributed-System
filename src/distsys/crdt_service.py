@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from distsys.causal import CausalActor, CausalClock, CausalToken, VersionVector
 from distsys.cluster.consistent_hash import NoRouteError
 from distsys.crdt import CrdtType, GCounter, MVRegister, ORSet, PNCounter
+from distsys.persistence.errors import PersistenceBackpressureError, PersistenceUnavailableError
 from distsys.proto import messages_pb2
 from distsys.protocol.errors import DecodeError
 from distsys.protocol.message import Message, MessageType
@@ -36,6 +38,7 @@ from distsys.replication.service import ReplicationService
 from distsys.resilience.deadline import Deadline, DeadlineExceeded
 from distsys.resilience.retry import RetryPolicy
 from distsys.storage import CrdtStore, StoredCrdtEntry
+from distsys.storage.protocol import CrdtStateStore
 from distsys.utils.config import Settings
 
 logger = logging.getLogger("distsys.crdt.service")
@@ -50,7 +53,12 @@ class CrdtService:
         settings: Settings,
         cluster_service: Any,
         peer_client: Any | None = None,
-        store: CrdtStore | None = None,
+        store: CrdtStateStore | None = None,
+        actor: CausalActor | None = None,
+        clock: CausalClock | None = None,
+        commit_local: (
+            Callable[[StoredCrdtEntry, VersionVector, Deadline], Awaitable[StoredCrdtEntry]] | None
+        ) = None,
     ) -> None:
         if not settings.cluster_enabled:
             raise ValueError("CRDT service requires cluster mode")
@@ -61,9 +69,12 @@ class CrdtService:
         self.cluster_service = cluster_service
         self.local_member = cluster_service.local_member
         self.local_node_id = self.local_member.node_id
-        self.actor = CausalActor(self.local_node_id, self.local_member.incarnation)
-        self.clock = CausalClock(self.actor)
-        self.store = store or CrdtStore()
+        self.actor = actor or CausalActor(self.local_node_id, self.local_member.incarnation)
+        self.clock = clock or CausalClock(self.actor)
+        if self.clock.actor != self.actor:
+            raise ValueError("clock actor must match CRDT service actor")
+        self.store: CrdtStateStore = store or CrdtStore()
+        self._commit_local = commit_local or self._commit_local_in_memory
         self.peer_client = peer_client or CrdtPeerClient(
             local_node_id=self.local_node_id,
             max_frame_size=settings.max_frame_size,
@@ -120,9 +131,16 @@ class CrdtService:
             self._peer_cache[member.node_id] = member
         return replicas
 
-    async def start(self) -> None:
+    async def start_fast_path(self) -> None:
         await self._alive_peers()
-        await self.replication.start()
+        await self.replication.start_fast_path()
+
+    async def start_anti_entropy(self) -> None:
+        await self.replication.start_anti_entropy()
+
+    async def start(self) -> None:
+        await self.start_fast_path()
+        await self.start_anti_entropy()
 
     async def stop(self) -> None:
         await self.replication.stop()
@@ -241,6 +259,11 @@ class CrdtService:
         remote_replicas = tuple(
             member for member in replicas if member.node_id != self.local_node_id
         )
+        if current is None and not require_existing:
+            frontier = await self._frontier()
+            if frontier.dominates(required):
+                return None, False
+
         if current is None and not remote_replicas:
             frontier = await self._frontier()
             if frontier.dominates(required):
@@ -304,6 +327,15 @@ class CrdtService:
 
         raise ValueError(f"unsupported CRDT type: {request.crdt_type}")
 
+    async def _commit_local_in_memory(
+        self,
+        entry: StoredCrdtEntry,
+        frontier: VersionVector,
+        deadline: Deadline,
+    ) -> StoredCrdtEntry:
+        del frontier, deadline
+        return await self.store.replace(entry, expected_type=entry.crdt_type)
+
     async def mutate(
         self,
         request: CrdtMutationData,
@@ -318,9 +350,7 @@ class CrdtService:
                 request.key,
                 request.causal_token,
                 deadline,
-                require_existing=(
-                    request.operation == "remove" or request.crdt_type is CrdtType.MVREGISTER
-                ),
+                require_existing=(request.operation == "remove"),
             )
             if existing is not None and existing.crdt_type is not request.crdt_type:
                 raise TypeError("cannot change CRDT type for existing key")
@@ -341,25 +371,28 @@ class CrdtService:
                         existing.causal_context if existing is not None else VersionVector()
                     )
                     observed = previous_context.merge(request.causal_token.version)
-                    dot, frontier = await self.clock.allocate(observed)
-                    state = (
-                        existing.state
-                        if existing is not None
-                        else self._empty_state(request.crdt_type)
-                    )
-                    next_state = self._apply_mutation(state, request, dot)
-                    next_entry = StoredCrdtEntry(
-                        key=request.key,
-                        crdt_type=request.crdt_type,
-                        state=next_state,
-                        state_version=previous_version.with_dot(dot),
-                        causal_context=(
-                            previous_context.merge(request.causal_token.version)
-                            .merge(frontier)
-                            .with_dot(dot)
-                        ),
-                    )
-                    await self.store.replace(next_entry, expected_type=request.crdt_type)
+                    async with self.clock.staged_allocation(observed) as allocation:
+                        dot = allocation.dot
+                        frontier = allocation.frontier
+                        state = (
+                            existing.state
+                            if existing is not None
+                            else self._empty_state(request.crdt_type)
+                        )
+                        next_state = self._apply_mutation(state, request, dot)
+                        next_entry = StoredCrdtEntry(
+                            key=request.key,
+                            crdt_type=request.crdt_type,
+                            state=next_state,
+                            state_version=previous_version.with_dot(dot),
+                            causal_context=(
+                                previous_context.merge(request.causal_token.version)
+                                .merge(frontier)
+                                .with_dot(dot)
+                            ),
+                        )
+                        await self._commit_local(next_entry, frontier, deadline)
+                        allocation.commit()
                 await self.replication.publish_write(reservation, next_entry)
             except Exception:
                 await self.replication.cancel_write(reservation)
@@ -375,6 +408,10 @@ class CrdtService:
                 },
             )
             return await self._success(next_entry, repair_performed=repair_performed)
+        except PersistenceBackpressureError as exc:
+            return await self._error(messages_pb2.PERSISTENCE_BACKPRESSURE, str(exc))
+        except PersistenceUnavailableError as exc:
+            return await self._error(messages_pb2.PERSISTENCE_UNAVAILABLE, str(exc))
         except ReplicationBackpressureError as exc:
             return await self._error(messages_pb2.REPLICATION_BACKPRESSURE, str(exc))
         except CausalUnavailableError as exc:

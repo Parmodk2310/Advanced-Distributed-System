@@ -56,3 +56,34 @@ async def test_old_generation_completion_does_not_drop_newer_state():
     second = await outbox.next_ready()
     assert second.generation == 2
     assert second.state.state.value() == 2  # type: ignore[union-attr]
+
+
+@pytest.mark.asyncio
+async def test_reserved_follow_up_survives_completion_of_in_flight_generation():
+    outbox = ReplicationOutbox(capacity=1)
+    first_reservation = await outbox.reserve((("node-1", "k"),))
+    await outbox.publish(first_reservation, {"k": entry("k", 1)})
+    first = await outbox.next_ready()
+
+    follow_up = await outbox.reserve((("node-1", "k"),))
+    await outbox.complete("node-1", "k", first.generation)
+
+    await outbox.publish(follow_up, {"k": entry("k", 2)})
+    second = await outbox.next_ready()
+    assert second.generation == 2
+    assert second.state.state.value() == 2  # type: ignore[union-attr]
+
+
+@pytest.mark.asyncio
+async def test_cancelled_follow_up_releases_completed_placeholder():
+    outbox = ReplicationOutbox(capacity=1)
+    first_reservation = await outbox.reserve((("node-1", "k"),))
+    await outbox.publish(first_reservation, {"k": entry("k", 1)})
+    first = await outbox.next_ready()
+
+    follow_up = await outbox.reserve((("node-1", "k"),))
+    await outbox.complete("node-1", "k", first.generation)
+    assert await outbox.pending_count() == 1
+
+    await outbox.cancel(follow_up)
+    assert await outbox.pending_count() == 0

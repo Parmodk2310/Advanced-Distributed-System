@@ -115,3 +115,52 @@ async def test_successful_write_returns_incarnation_scoped_token():
     actors = [actor for actor, _ in result.causal_token.version.items()]
     assert actors[0].node_id == "node-0"
     assert actors[0].incarnation == 123
+
+
+@pytest.mark.asyncio
+async def test_service_accepts_durable_actor_and_clock_injection():
+    from distsys.causal import CausalActor, CausalClock
+
+    durable_actor = CausalActor("node-0", 500)
+    durable_clock = CausalClock(durable_actor)
+    svc = CrdtService(
+        settings=Settings(
+            node_id="node-0", host="127.0.0.1", port=18000, cluster_enabled=True, crdt_enabled=True
+        ),
+        cluster_service=ClusterStub(),  # type: ignore[arg-type]
+        peer_client=UnusedPeer(),  # type: ignore[arg-type]
+        actor=durable_actor,
+        clock=durable_clock,
+    )
+    result = await svc.mutate(
+        CrdtMutationData("views", CrdtType.GCOUNTER, "increment", amount=1),
+        Deadline.after(1),
+    )
+    actors = [actor for actor, _ in result.causal_token.version.items()]
+    assert actors[0].incarnation == 500
+
+
+@pytest.mark.asyncio
+async def test_failed_durable_commit_does_not_advance_memory_or_clock():
+    from distsys.persistence.errors import PersistenceUnavailableError
+
+    async def fail_commit(entry, frontier, deadline):
+        raise PersistenceUnavailableError("disk unavailable")
+
+    svc = CrdtService(
+        settings=Settings(
+            node_id="node-0", host="127.0.0.1", port=18000, cluster_enabled=True, crdt_enabled=True
+        ),
+        cluster_service=ClusterStub(),  # type: ignore[arg-type]
+        peer_client=UnusedPeer(),  # type: ignore[arg-type]
+        commit_local=fail_commit,
+    )
+    before = await svc.clock.frontier()
+    result = await svc.mutate(
+        CrdtMutationData("views", CrdtType.GCOUNTER, "increment", amount=1),
+        Deadline.after(1),
+    )
+    assert not result.success
+    assert result.error_code == 12
+    assert await svc.store.get("views") is None
+    assert await svc.clock.frontier() == before

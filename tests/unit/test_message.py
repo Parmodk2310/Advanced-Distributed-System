@@ -41,3 +41,14 @@ def test_phase4_message_type_values_are_appended_without_renumbering():
     assert int(MessageType.CRDT_DIGEST) == 16
     assert int(MessageType.CRDT_DIGEST_RESPONSE) == 17
     assert int(MessageType.CRDT_RESPONSE) == 18
+
+
+def test_phase5_error_codes_are_appended_without_renumbering():
+    from distsys.proto import messages_pb2
+
+    assert messages_pb2.KEY_NOT_FOUND == 11
+    assert messages_pb2.PERSISTENCE_UNAVAILABLE == 12
+    assert messages_pb2.PERSISTENCE_BACKPRESSURE == 13
+    assert messages_pb2.RECOVERY_IN_PROGRESS == 14
+    assert messages_pb2.COORDINATION_UNAVAILABLE == 15
+    assert messages_pb2.TLS_AUTHENTICATION_FAILED == 16
