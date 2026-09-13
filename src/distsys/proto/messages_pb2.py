@@ -24,21 +24,39 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emessages.proto\x12\ndistsys.v1\"i\n\x08\x45nvelope\x12\x11\n\tsender_id\x18\x01 \x01(\t\x12\x16\n\x0e\x63orrelation_id\x18\x02 \x01(\t\x12\x14\n\x0ctimestamp_ms\x18\x03 \x01(\x04\x12\x0b\n\x03ttl\x18\x04 \x01(\r\x12\x0f\n\x07payload\x18\x05 \x01(\x0c\"6\n\x0bTaskRequest\x12\x11\n\ttask_name\x18\x01 \x01(\t\x12\x14\n\x0cpayload_json\x18\x02 \x01(\x0c\"=\n\x05\x45rror\x12#\n\x04\x63ode\x18\x01 \x01(\x0e\x32\x15.distsys.v1.ErrorCode\x12\x0f\n\x07message\x18\x02 \x01(\t\"r\n\x0cTaskResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x13\n\x0bresult_json\x18\x02 \x01(\x0c\x12 \n\x05\x65rror\x18\x03 \x01(\x0b\x32\x11.distsys.v1.Error\x12\x1a\n\x12processing_time_us\x18\x04 \x01(\x04*\x91\x01\n\tErrorCode\x12\x1a\n\x16\x45RROR_CODE_UNSPECIFIED\x10\x00\x12\x10\n\x0cUNKNOWN_TASK\x10\x01\x12\x13\n\x0fINVALID_REQUEST\x10\x02\x12\x12\n\x0eINTERNAL_ERROR\x10\x03\x12\x0b\n\x07TIMEOUT\x10\x04\x12\x0e\n\nOVERLOADED\x10\x05\x12\x10\n\x0cRATE_LIMITED\x10\x06\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emessages.proto\x12\ndistsys.v1\"i\n\x08\x45nvelope\x12\x11\n\tsender_id\x18\x01 \x01(\t\x12\x16\n\x0e\x63orrelation_id\x18\x02 \x01(\t\x12\x14\n\x0ctimestamp_ms\x18\x03 \x01(\x04\x12\x0b\n\x03ttl\x18\x04 \x01(\r\x12\x0f\n\x07payload\x18\x05 \x01(\x0c\"K\n\x0bTaskRequest\x12\x11\n\ttask_name\x18\x01 \x01(\t\x12\x14\n\x0cpayload_json\x18\x02 \x01(\x0c\x12\x13\n\x0brouting_key\x18\x03 \x01(\t\"=\n\x05\x45rror\x12#\n\x04\x63ode\x18\x01 \x01(\x0e\x32\x15.distsys.v1.ErrorCode\x12\x0f\n\x07message\x18\x02 \x01(\t\"r\n\x0cTaskResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x13\n\x0bresult_json\x18\x02 \x01(\x0c\x12 \n\x05\x65rror\x18\x03 \x01(\x0b\x32\x11.distsys.v1.Error\x12\x1a\n\x12processing_time_us\x18\x04 \x01(\x04\"{\n\rClusterMember\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x0c\n\x04host\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\x12(\n\x06status\x18\x04 \x01(\x0e\x32\x18.distsys.v1.MemberStatus\x12\x13\n\x0bincarnation\x18\x05 \x01(\x04\"8\n\x0bJoinRequest\x12)\n\x06member\x18\x01 \x01(\x0b\x32\x19.distsys.v1.ClusterMember\":\n\x0cJoinResponse\x12*\n\x07members\x18\x01 \x03(\x0b\x32\x19.distsys.v1.ClusterMember\"1\n\x04Ping\x12)\n\x06gossip\x18\x01 \x03(\x0b\x32\x19.distsys.v1.ClusterMember\"Y\n\x03\x41\x63k\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x16\n\x0etarget_node_id\x18\x02 \x01(\t\x12)\n\x06gossip\x18\x03 \x03(\x0b\x32\x19.distsys.v1.ClusterMember\"c\n\x0bPingRequest\x12)\n\x06target\x18\x01 \x01(\x0b\x32\x19.distsys.v1.ClusterMember\x12)\n\x06gossip\x18\x02 \x03(\x0b\x32\x19.distsys.v1.ClusterMember\"4\n\x06Gossip\x12*\n\x07members\x18\x01 \x03(\x0b\x32\x19.distsys.v1.ClusterMember\"v\n\x14\x46orwardedTaskRequest\x12(\n\x07request\x18\x01 \x01(\x0b\x32\x17.distsys.v1.TaskRequest\x12\x16\n\x0eorigin_node_id\x18\x02 \x01(\t\x12\x1c\n\x14remaining_timeout_ms\x18\x03 \x01(\r*\xb5\x01\n\tErrorCode\x12\x1a\n\x16\x45RROR_CODE_UNSPECIFIED\x10\x00\x12\x10\n\x0cUNKNOWN_TASK\x10\x01\x12\x13\n\x0fINVALID_REQUEST\x10\x02\x12\x12\n\x0eINTERNAL_ERROR\x10\x03\x12\x0b\n\x07TIMEOUT\x10\x04\x12\x0e\n\nOVERLOADED\x10\x05\x12\x10\n\x0cRATE_LIMITED\x10\x06\x12\x0c\n\x08NO_ROUTE\x10\x07\x12\x14\n\x10PEER_UNAVAILABLE\x10\x08*O\n\x0cMemberStatus\x12\x1d\n\x19MEMBER_STATUS_UNSPECIFIED\x10\x00\x12\t\n\x05\x41LIVE\x10\x01\x12\x0b\n\x07SUSPECT\x10\x02\x12\x08\n\x04\x44\x45\x41\x44\x10\x03\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'messages_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_ERRORCODE']._serialized_start=373
-  _globals['_ERRORCODE']._serialized_end=518
+  _globals['_ERRORCODE']._serialized_start=1054
+  _globals['_ERRORCODE']._serialized_end=1235
+  _globals['_MEMBERSTATUS']._serialized_start=1237
+  _globals['_MEMBERSTATUS']._serialized_end=1316
   _globals['_ENVELOPE']._serialized_start=30
   _globals['_ENVELOPE']._serialized_end=135
   _globals['_TASKREQUEST']._serialized_start=137
-  _globals['_TASKREQUEST']._serialized_end=191
-  _globals['_ERROR']._serialized_start=193
-  _globals['_ERROR']._serialized_end=254
-  _globals['_TASKRESPONSE']._serialized_start=256
-  _globals['_TASKRESPONSE']._serialized_end=370
+  _globals['_TASKREQUEST']._serialized_end=212
+  _globals['_ERROR']._serialized_start=214
+  _globals['_ERROR']._serialized_end=275
+  _globals['_TASKRESPONSE']._serialized_start=277
+  _globals['_TASKRESPONSE']._serialized_end=391
+  _globals['_CLUSTERMEMBER']._serialized_start=393
+  _globals['_CLUSTERMEMBER']._serialized_end=516
+  _globals['_JOINREQUEST']._serialized_start=518
+  _globals['_JOINREQUEST']._serialized_end=574
+  _globals['_JOINRESPONSE']._serialized_start=576
+  _globals['_JOINRESPONSE']._serialized_end=634
+  _globals['_PING']._serialized_start=636
+  _globals['_PING']._serialized_end=685
+  _globals['_ACK']._serialized_start=687
+  _globals['_ACK']._serialized_end=776
+  _globals['_PINGREQUEST']._serialized_start=778
+  _globals['_PINGREQUEST']._serialized_end=877
+  _globals['_GOSSIP']._serialized_start=879
+  _globals['_GOSSIP']._serialized_end=931
+  _globals['_FORWARDEDTASKREQUEST']._serialized_start=933
+  _globals['_FORWARDEDTASKREQUEST']._serialized_end=1051
 # @@protoc_insertion_point(module_scope)

@@ -21,3 +21,7 @@ def test_register_rejects_empty_task_name():
     classifier = TaskClassifier()
     with pytest.raises(ValueError, match="task name cannot be empty"):
         classifier.register("", ExecutionClass.CPU)
+
+
+def test_cluster_whoami_is_async():
+    assert TaskClassifier.default().classify("cluster.whoami") is ExecutionClass.ASYNC

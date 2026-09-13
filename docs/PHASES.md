@@ -54,26 +54,34 @@ Add/modify:
 
 Exit: CPU work is isolated from the event loop, admission is bounded, structured overload/rate-limit/deadline behavior is verified, and retry/circuit-breaker primitives are ready for Phase-3 remote calls.
 
-## Phase 3 — Three-Node Cluster
+## Phase 3 — Distributed Cluster
 
-Add:
+Implemented/owned:
 
 - `src/distsys/cluster/member.py`
 - `src/distsys/cluster/membership.py`
-- `src/distsys/cluster/gossip.py`
-- `src/distsys/cluster/failure_detector.py`
+- `src/distsys/cluster/codec.py`
 - `src/distsys/cluster/consistent_hash.py`
 - `src/distsys/cluster/peer_client.py`
-- `src/distsys/cluster/router.py`
-- `tests/unit/test_membership.py`
-- `tests/unit/test_failure_detector.py`
-- `tests/unit/test_consistent_hash.py`
-- `tests/integration/test_three_node_cluster.py`
-- `tests/integration/test_gossip_convergence.py`
-- `tests/integration/test_node_failure_reroute.py`
-- `scripts/run_cluster.py`
+- `src/distsys/cluster/failure_detector.py`
+- `src/distsys/cluster/gossip.py`
+- `src/distsys/cluster/cluster_router.py`
+- `src/distsys/cluster/service.py`
+- protocol additions for join, probes, gossip, routed and forwarded requests
+- optional `routing_key` client API
+- `cluster.whoami` diagnostic routing task
+- static-seed bootstrap + decentralized gossip membership
+- SWIM-lite direct/indirect failure detection
+- incarnation-aware `ALIVE -> SUSPECT -> DEAD` state
+- SHA-256 consistent hashing with 64 virtual nodes by default
+- single-hop task forwarding with shared deadlines
+- Phase-2 retry/circuit-breaker integration for peer task transport
+- deterministic candidate failover
+- `scripts/run_phase3_cluster.sh`
+- `scripts/phase3_smoke.py`
+- Phase-3 unit/integration coverage
 
-Exit: three nodes converge, detect loss, and remap only affected keys.
+Exit: three nodes bootstrap and converge, detect failure, remove unhealthy members from ownership, route keyed work to deterministic owners, fail over idempotent work, and admit restarted nodes with newer incarnations. Delivery remains best-effort/idempotent rather than exactly once.
 
 ## Phase 4 — Causal Consistency & CRDT Replication
 

@@ -24,6 +24,7 @@ class TaskClassifier:
     def default(cls) -> TaskClassifier:
         classifier = cls()
         classifier.register("echo", ExecutionClass.ASYNC)
+        classifier.register("cluster.whoami", ExecutionClass.ASYNC)
         for name in ("hash", "sort", "aggregate"):
             classifier.register(name, ExecutionClass.CPU)
         return classifier

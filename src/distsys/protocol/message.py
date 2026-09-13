@@ -13,6 +13,13 @@ class MessageType(IntEnum):
     RESPONSE = 2
     ERROR = 3
     HEARTBEAT = 4
+    JOIN_REQUEST = 5
+    JOIN_RESPONSE = 6
+    PING = 7
+    ACK = 8
+    PING_REQ = 9
+    GOSSIP = 10
+    FORWARDED_REQUEST = 11
 
 
 @dataclass(slots=True, frozen=True)
@@ -32,9 +39,10 @@ class Message:
         payload: bytes,
         correlation_id: str | None = None,
         ttl: int = 8,
+        msg_type: MessageType = MessageType.REQUEST,
     ) -> Message:
         return cls(
-            msg_type=MessageType.REQUEST,
+            msg_type=msg_type,
             sender_id=sender_id,
             correlation_id=correlation_id or str(uuid.uuid4()),
             timestamp_ms=int(time.time() * 1000),

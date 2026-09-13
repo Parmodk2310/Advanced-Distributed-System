@@ -5,7 +5,27 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from distsys.cluster.member import SeedAddress
 from distsys.protocol.framing import DEFAULT_MAX_FRAME_SIZE
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean value")
+
+
+def _env_seeds() -> tuple[SeedAddress, ...]:
+    raw = os.getenv("CLUSTER_SEEDS", "").strip()
+    if not raw:
+        return ()
+    return tuple(SeedAddress.parse(item.strip()) for item in raw.split(",") if item.strip())
 
 
 @dataclass(slots=True, frozen=True)
@@ -29,6 +49,17 @@ class Settings:
     circuit_breaker_failure_threshold: int = 5
     circuit_breaker_recovery_seconds: float = 10.0
 
+    cluster_enabled: bool = False
+    cluster_seeds: tuple[SeedAddress, ...] = ()
+    cluster_virtual_nodes: int = 64
+    cluster_probe_interval_seconds: float = 1.0
+    cluster_ping_timeout_seconds: float = 0.25
+    cluster_indirect_timeout_seconds: float = 0.50
+    cluster_indirect_probe_count: int = 2
+    cluster_suspicion_timeout_seconds: float = 3.0
+    cluster_dead_retention_seconds: float = 30.0
+    cluster_gossip_interval_seconds: float = 1.0
+
     def __post_init__(self) -> None:
         if self.cpu_workers < 1:
             raise ValueError("cpu_workers must be at least 1")
@@ -40,6 +71,22 @@ class Settings:
             raise ValueError("rate_limit_burst must be at least 1")
         if self.request_timeout_seconds <= 0:
             raise ValueError("request_timeout_seconds must be greater than zero")
+        if self.cluster_virtual_nodes < 1:
+            raise ValueError("cluster virtual nodes must be at least 1")
+        if self.cluster_probe_interval_seconds <= 0:
+            raise ValueError("cluster probe interval must be greater than zero")
+        if self.cluster_ping_timeout_seconds <= 0:
+            raise ValueError("cluster ping timeout must be greater than zero")
+        if self.cluster_indirect_timeout_seconds <= 0:
+            raise ValueError("cluster indirect timeout must be greater than zero")
+        if self.cluster_indirect_probe_count < 0:
+            raise ValueError("cluster indirect probe count cannot be negative")
+        if self.cluster_suspicion_timeout_seconds <= 0:
+            raise ValueError("cluster suspicion timeout must be greater than zero")
+        if self.cluster_dead_retention_seconds <= self.cluster_suspicion_timeout_seconds:
+            raise ValueError("cluster dead retention must exceed suspicion timeout")
+        if self.cluster_gossip_interval_seconds <= 0:
+            raise ValueError("cluster gossip interval must be greater than zero")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -62,5 +109,25 @@ class Settings:
             ),
             circuit_breaker_recovery_seconds=float(
                 os.getenv("CIRCUIT_BREAKER_RECOVERY_SECONDS", "10.0")
+            ),
+            cluster_enabled=_env_bool("CLUSTER_ENABLED", False),
+            cluster_seeds=_env_seeds(),
+            cluster_virtual_nodes=int(os.getenv("CLUSTER_VIRTUAL_NODES", "64")),
+            cluster_probe_interval_seconds=float(
+                os.getenv("CLUSTER_PROBE_INTERVAL_SECONDS", "1.0")
+            ),
+            cluster_ping_timeout_seconds=float(os.getenv("CLUSTER_PING_TIMEOUT_SECONDS", "0.25")),
+            cluster_indirect_timeout_seconds=float(
+                os.getenv("CLUSTER_INDIRECT_TIMEOUT_SECONDS", "0.50")
+            ),
+            cluster_indirect_probe_count=int(os.getenv("CLUSTER_INDIRECT_PROBE_COUNT", "2")),
+            cluster_suspicion_timeout_seconds=float(
+                os.getenv("CLUSTER_SUSPICION_TIMEOUT_SECONDS", "3.0")
+            ),
+            cluster_dead_retention_seconds=float(
+                os.getenv("CLUSTER_DEAD_RETENTION_SECONDS", "30.0")
+            ),
+            cluster_gossip_interval_seconds=float(
+                os.getenv("CLUSTER_GOSSIP_INTERVAL_SECONDS", "1.0")
             ),
         )
