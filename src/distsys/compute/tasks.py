@@ -79,3 +79,15 @@ def aggregate_task(payload: Any) -> dict[str, Any]:
         "max": max(numeric),
         "mean": total / len(numeric),
     }
+
+
+def make_whoami_task(node_id: str):
+    """Create an async diagnostic task bound to one node identity."""
+    if not node_id:
+        raise ValueError("node_id is required")
+
+    async def whoami_task(payload: Any) -> dict[str, str]:
+        _require_mapping(payload)
+        return {"node_id": node_id}
+
+    return whoami_task

@@ -84,8 +84,10 @@ class DistributedClient:
         writer: asyncio.StreamWriter,
         task_name: str,
         payload: Any,
+        *,
+        routing_key: str = "",
     ) -> Any:
-        request_payload = encode_task_request(task_name, payload)
+        request_payload = encode_task_request(task_name, payload, routing_key=routing_key)
         request = Message.new_request(sender_id=self.client_id, payload=request_payload)
 
         writer.write(encode_frame(request, max_frame_size=self.max_frame_size))
@@ -105,14 +107,16 @@ class DistributedClient:
             raise RemoteTaskError(decoded.error_code, decoded.error_message)
         return decoded.result
 
-    async def request(self, task_name: str, payload: Any) -> Any:
+    async def request(self, task_name: str, payload: Any, *, routing_key: str = "") -> Any:
         """Send a one-shot request using a fresh TCP connection."""
         reader, writer = await asyncio.wait_for(
             asyncio.open_connection(self.host, self.port),
             timeout=self.timeout_seconds,
         )
         try:
-            return await self._round_trip(reader, writer, task_name, payload)
+            return await self._round_trip(
+                reader, writer, task_name, payload, routing_key=routing_key
+            )
         finally:
             writer.close()
             try:
@@ -120,7 +124,9 @@ class DistributedClient:
             except ConnectionError:
                 pass
 
-    async def request_connected(self, task_name: str, payload: Any) -> Any:
+    async def request_connected(
+        self, task_name: str, payload: Any, *, routing_key: str = ""
+    ) -> Any:
         """Send a sequential request over an already-open persistent connection."""
         if not self.connected or self._reader is None or self._writer is None:
             raise ConnectionError("client is not connected; call connect() first")
@@ -134,4 +140,5 @@ class DistributedClient:
                 self._writer,
                 task_name,
                 payload,
+                routing_key=routing_key,
             )

@@ -14,6 +14,13 @@ from distsys.protocol.message import Message, MessageType
 
 
 @dataclass(slots=True, frozen=True)
+class TaskRequestData:
+    task_name: str
+    payload: Any
+    routing_key: str
+
+
+@dataclass(slots=True, frozen=True)
 class TaskResponseData:
     success: bool
     result: Any | None
@@ -69,14 +76,18 @@ def _json_load(data: bytes) -> Any:
         raise DecodeError("invalid JSON application payload") from exc
 
 
-def encode_task_request(task_name: str, payload: Any) -> bytes:
+def encode_task_request(task_name: str, payload: Any, *, routing_key: str = "") -> bytes:
     if not task_name:
         raise DecodeError("task_name is required")
-    request = messages_pb2.TaskRequest(task_name=task_name, payload_json=_json_dump(payload))
+    request = messages_pb2.TaskRequest(
+        task_name=task_name,
+        payload_json=_json_dump(payload),
+        routing_key=routing_key,
+    )
     return request.SerializeToString()
 
 
-def decode_task_request(data: bytes) -> tuple[str, Any]:
+def decode_task_request(data: bytes) -> TaskRequestData:
     request = messages_pb2.TaskRequest()
     try:
         request.ParseFromString(data)
@@ -84,7 +95,11 @@ def decode_task_request(data: bytes) -> tuple[str, Any]:
         raise DecodeError("invalid TaskRequest protobuf") from exc
     if not request.task_name:
         raise DecodeError("task_name is required")
-    return request.task_name, _json_load(request.payload_json)
+    return TaskRequestData(
+        task_name=request.task_name,
+        payload=_json_load(request.payload_json),
+        routing_key=request.routing_key,
+    )
 
 
 def encode_task_response(

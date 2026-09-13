@@ -45,3 +45,11 @@ def test_aggregate_task_returns_basic_statistics():
 def test_aggregate_task_rejects_empty_values():
     with pytest.raises(TaskValidationError, match="non-empty"):
         aggregate_task({"values": []})
+
+
+@pytest.mark.asyncio
+async def test_whoami_task_reports_bound_node_identity():
+    from distsys.compute.tasks import make_whoami_task
+
+    task = make_whoami_task("node-2")
+    assert await task({}) == {"node_id": "node-2"}

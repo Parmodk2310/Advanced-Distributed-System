@@ -10,6 +10,15 @@ enum ErrorCode {
   TIMEOUT = 4;
   OVERLOADED = 5;
   RATE_LIMITED = 6;
+  NO_ROUTE = 7;
+  PEER_UNAVAILABLE = 8;
+}
+
+enum MemberStatus {
+  MEMBER_STATUS_UNSPECIFIED = 0;
+  ALIVE = 1;
+  SUSPECT = 2;
+  DEAD = 3;
 }
 
 message Envelope {
@@ -23,6 +32,7 @@ message Envelope {
 message TaskRequest {
   string task_name = 1;
   bytes payload_json = 2;
+  string routing_key = 3;
 }
 
 message Error {
@@ -35,4 +45,31 @@ message TaskResponse {
   bytes result_json = 2;
   Error error = 3;
   uint64 processing_time_us = 4;
+}
+
+message ClusterMember {
+  string node_id = 1;
+  string host = 2;
+  uint32 port = 3;
+  MemberStatus status = 4;
+  uint64 incarnation = 5;
+}
+
+message JoinRequest { ClusterMember member = 1; }
+message JoinResponse { repeated ClusterMember members = 1; }
+message Ping { repeated ClusterMember gossip = 1; }
+message Ack {
+  bool success = 1;
+  string target_node_id = 2;
+  repeated ClusterMember gossip = 3;
+}
+message PingRequest {
+  ClusterMember target = 1;
+  repeated ClusterMember gossip = 2;
+}
+message Gossip { repeated ClusterMember members = 1; }
+message ForwardedTaskRequest {
+  TaskRequest request = 1;
+  string origin_node_id = 2;
+  uint32 remaining_timeout_ms = 3;
 }
