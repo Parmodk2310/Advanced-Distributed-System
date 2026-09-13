@@ -324,3 +324,168 @@ See:
 - `docs/superpowers/plans/2026-09-13-phase3-distributed-cluster.md`
 - `docs/PHASE3_FILE_MANIFEST.md`
 - `docs/PHASE3_VERIFICATION.md`
+
+# Phase 4 — Causal Consistency & CRDT Replication
+
+Phase 4 layers a primary-less causally consistent CRDT data plane on top of the Phase-3 SWIM-lite cluster and consistent-hash ring.
+
+```text
+SWIM membership
+      |
+      v
+consistent-hash replica set
+      |
+      v
+VersionVector + incarnation-scoped Dot
+      |
+      v
+GCounter / PNCounter / ORSet / MVRegister
+      |
+      +--> local-first mutation
+      |      |
+      |      v
+      |   bounded coalescing outbox
+      |      |
+      |      v
+      |   async state replication
+      |
+      +--> targeted causal read/write repair
+      |
+      +--> digest-driven anti-entropy
+             |
+             v
+          convergence
+```
+
+## Phase-4 guarantees
+
+A client carries a session-wide `CausalToken` backed by an incarnation-scoped VersionVector. A replica serves a tokened read only when its causal knowledge dominates that token; otherwise it performs bounded parallel repair from the current replica set and returns `CAUSAL_UNAVAILABLE` if the frontier cannot be satisfied before the shared request deadline.
+
+The Phase-4 API demonstrates:
+
+- read-your-writes,
+- monotonic reads,
+- monotonic writes,
+- writes-follow-reads,
+- cross-key causal dependencies,
+- concurrent-update preservation,
+- eventual CRDT convergence for state retained by at least one replica.
+
+It does **not** claim durable acknowledgement, quorum consistency, exactly-once execution, transactions, or disk persistence. A locally acknowledged write can be lost if the only process that learned it dies before another replica receives it.
+
+## CRDT client example
+
+```python
+import asyncio
+
+from distsys.crdt_client import CrdtClient
+
+
+async def main() -> None:
+    client = CrdtClient(host="127.0.0.1", port=18000)
+
+    views = await client.increment("page.views", amount=1)
+    tags = await client.add(
+        "user:42:tags",
+        "distributed-systems",
+        causal_token=views.causal_token,
+    )
+    status = await client.write_register(
+        "user:42:status",
+        {"risk": "medium"},
+        causal_token=tags.causal_token,
+    )
+
+    result = await client.read(
+        "user:42:status",
+        causal_token=status.causal_token,
+    )
+    print(result.value)
+    print(result.served_by)
+    print(result.repair_performed)
+
+
+asyncio.run(main())
+```
+
+## Phase-4 local cluster
+
+Terminal 1:
+
+```bash
+make phase4-cluster
+```
+
+Terminal 2:
+
+```bash
+make phase4-smoke
+```
+
+Managed failure/rejoin verification:
+
+```bash
+python scripts/phase4_smoke.py \
+  --host 127.0.0.1 \
+  --ports 18000 18001 18002 \
+  --managed-command 'bash scripts/run_phase4_cluster.sh'
+```
+
+The launcher refuses to start when any required port is already occupied and only cleans up child processes it launched itself.
+
+## Phase-4 flow
+
+```text
+CRDT_MUTATE_REQUEST
+    -> any-node ingress
+    -> current consistent-hash replica set
+    -> targeted causal repair if required
+    -> reserve/coalesce replication outbox
+    -> allocate incarnation-scoped Dot
+    -> mutate local CRDT state
+    -> commit in-memory state
+    -> publish latest state snapshot to outbox
+    -> return success + CausalToken
+
+CRDT_READ_REQUEST
+    -> local causal dominance check
+    -> fast-path serve when satisfied
+    -> otherwise parallel targeted replica fetch
+    -> CRDT state/context merge
+    -> serve only if requested frontier is satisfied
+
+CRDT_REPLICATE / CRDT_FETCH / CRDT_DIGEST
+    -> peer data/control path
+    -> bypass public task token bucket
+```
+
+## Phase-4 configuration
+
+```text
+CRDT_ENABLED=false
+CRDT_REPLICATION_FACTOR=3
+CRDT_REPLICATION_QUEUE_CAPACITY=500
+CRDT_REPLICATION_WORKERS=2
+CRDT_REPLICATION_RETRY_MAX_ATTEMPTS=3
+CRDT_REPLICATION_RETRY_BASE_DELAY_SECONDS=0.05
+CRDT_REPLICATION_RETRY_MAX_DELAY_SECONDS=1.0
+CRDT_ANTI_ENTROPY_INTERVAL_SECONDS=2.0
+CRDT_ANTI_ENTROPY_BATCH_SIZE=100
+```
+
+`CRDT_ENABLED=true` requires `CLUSTER_ENABLED=true`.
+
+## Phase-4 release gate
+
+Before creating `v0.4.0`:
+
+```bash
+make proto
+make quality
+PYTHONPATH=src python -m compileall -q src scripts tests
+make phase4-cluster
+# second terminal
+make phase4-smoke
+```
+
+Then run the managed failure/rejoin smoke. Tag only after the Phase-4 branch is merged to `main` and the same quality/smoke gates pass on merged `main`.

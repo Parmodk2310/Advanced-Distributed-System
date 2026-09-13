@@ -20,6 +20,13 @@ class MessageType(IntEnum):
     PING_REQ = 9
     GOSSIP = 10
     FORWARDED_REQUEST = 11
+    CRDT_MUTATE_REQUEST = 12
+    CRDT_READ_REQUEST = 13
+    CRDT_REPLICATE = 14
+    CRDT_FETCH = 15
+    CRDT_DIGEST = 16
+    CRDT_DIGEST_RESPONSE = 17
+    CRDT_RESPONSE = 18
 
 
 @dataclass(slots=True, frozen=True)

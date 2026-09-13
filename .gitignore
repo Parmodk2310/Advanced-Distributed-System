@@ -17,3 +17,5 @@ certs/*.key
 certs/*.pem
 
 .phase3-logs/
+
+.phase4-logs/

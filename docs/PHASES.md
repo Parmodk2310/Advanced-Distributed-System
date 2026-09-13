@@ -85,25 +85,29 @@ Exit: three nodes bootstrap and converge, detect failure, remove unhealthy membe
 
 ## Phase 4 — Causal Consistency & CRDT Replication
 
-Add:
+Implemented/owned:
 
-- `src/distsys/consistency/vector_clock.py`
-- `src/distsys/consistency/store.py`
-- `src/distsys/consistency/replicator.py`
-- `src/distsys/consistency/crdt/base.py`
-- `src/distsys/consistency/crdt/g_counter.py`
-- `src/distsys/consistency/crdt/pn_counter.py`
-- `src/distsys/consistency/crdt/lww_register.py`
-- `src/distsys/consistency/crdt/or_set.py`
-- `tests/unit/test_vector_clock.py`
-- `tests/unit/test_g_counter.py`
-- `tests/unit/test_pn_counter.py`
-- `tests/unit/test_lww_register.py`
-- `tests/unit/test_or_set.py`
-- `tests/integration/test_crdt_replication.py`
-- `tests/integration/test_partition_merge.py`
+- `src/distsys/causal/{actor,dot,version_vector,token,clock}.py`
+- `src/distsys/crdt/{base,types,gcounter,pncounter,orset,mvregister}.py`
+- `src/distsys/storage/{models,crdt_store}.py`
+- `src/distsys/replication/{codec,replica_selector,outbox,replicator,causal_repair,digest,anti_entropy,peer_client,service}.py`
+- `src/distsys/crdt_service.py`
+- `src/distsys/crdt_client.py`
+- typed Protobuf causal/CRDT messages and error codes
+- incarnation-scoped causal actors and dotted mutation identities
+- session-wide VersionVector/CausalToken semantics
+- GCounter, PNCounter, observed-remove ORSet, and MVRegister
+- Phase-3 consistent-hash replica placement with RF=3 by default
+- primary-less local-first writes
+- bounded generation-safe coalescing replication outbox
+- asynchronous state-based fan-out with bounded retry
+- targeted causal read/write repair
+- digest-driven replica-aware anti-entropy
+- empty-store restart/rejoin reconstruction
+- topology-transparent `CrdtClient` and single-hop any-node ingress
+- `scripts/run_phase4_cluster.sh` and `scripts/phase4_smoke.py`
 
-Extend Protobuf with causal metadata and CRDT messages. Exit: partitioned concurrent updates deterministically converge.
+Exit: client sessions preserve read-your-writes, monotonic reads, monotonic writes, and writes-follow-reads; concurrent ORSet/MVRegister updates converge without clock-based conflict loss; missed replication is repaired by causal fetch or anti-entropy; and restarted replicas rejoin with a new causal actor epoch and reconstruct assigned in-memory state. Phase 4 intentionally does not claim durable acknowledgements, quorum durability, exactly-once execution, transactions, or disk persistence.
 
 ## Phase 5 — Security, Persistence & Recovery
 

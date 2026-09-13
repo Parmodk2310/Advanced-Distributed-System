@@ -30,3 +30,14 @@ def test_phase3_message_type_numbers_preserve_protocol_compatibility():
 def test_new_request_accepts_explicit_message_type():
     message = Message.new_request(sender_id="node-0", payload=b"control", msg_type=MessageType.PING)
     assert message.msg_type is MessageType.PING
+
+
+def test_phase4_message_type_values_are_appended_without_renumbering():
+    assert int(MessageType.FORWARDED_REQUEST) == 11
+    assert int(MessageType.CRDT_MUTATE_REQUEST) == 12
+    assert int(MessageType.CRDT_READ_REQUEST) == 13
+    assert int(MessageType.CRDT_REPLICATE) == 14
+    assert int(MessageType.CRDT_FETCH) == 15
+    assert int(MessageType.CRDT_DIGEST) == 16
+    assert int(MessageType.CRDT_DIGEST_RESPONSE) == 17
+    assert int(MessageType.CRDT_RESPONSE) == 18

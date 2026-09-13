@@ -60,6 +60,16 @@ class Settings:
     cluster_dead_retention_seconds: float = 30.0
     cluster_gossip_interval_seconds: float = 1.0
 
+    crdt_enabled: bool = False
+    crdt_replication_factor: int = 3
+    crdt_replication_queue_capacity: int = 500
+    crdt_replication_workers: int = 2
+    crdt_replication_retry_max_attempts: int = 3
+    crdt_replication_retry_base_delay_seconds: float = 0.05
+    crdt_replication_retry_max_delay_seconds: float = 1.0
+    crdt_anti_entropy_interval_seconds: float = 2.0
+    crdt_anti_entropy_batch_size: int = 100
+
     def __post_init__(self) -> None:
         if self.cpu_workers < 1:
             raise ValueError("cpu_workers must be at least 1")
@@ -87,6 +97,30 @@ class Settings:
             raise ValueError("cluster dead retention must exceed suspicion timeout")
         if self.cluster_gossip_interval_seconds <= 0:
             raise ValueError("cluster gossip interval must be greater than zero")
+
+        if self.crdt_enabled and not self.cluster_enabled:
+            raise ValueError("CRDT_ENABLED requires CLUSTER_ENABLED")
+        if self.crdt_replication_factor < 1:
+            raise ValueError("crdt replication factor must be at least 1")
+        if self.crdt_replication_queue_capacity < 1:
+            raise ValueError("crdt replication queue capacity must be at least 1")
+        if self.crdt_replication_workers < 1:
+            raise ValueError("crdt replication workers must be at least 1")
+        if self.crdt_replication_retry_max_attempts < 1:
+            raise ValueError("crdt replication retry attempts must be at least 1")
+        if self.crdt_replication_retry_base_delay_seconds < 0:
+            raise ValueError("crdt replication retry base delay cannot be negative")
+        if self.crdt_replication_retry_max_delay_seconds < 0:
+            raise ValueError("crdt replication retry max delay cannot be negative")
+        if (
+            self.crdt_replication_retry_max_delay_seconds
+            < self.crdt_replication_retry_base_delay_seconds
+        ):
+            raise ValueError("crdt replication retry max delay cannot be less than base delay")
+        if self.crdt_anti_entropy_interval_seconds <= 0:
+            raise ValueError("crdt anti entropy interval must be greater than zero")
+        if self.crdt_anti_entropy_batch_size < 1:
+            raise ValueError("crdt anti entropy batch size must be at least 1")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -130,4 +164,23 @@ class Settings:
             cluster_gossip_interval_seconds=float(
                 os.getenv("CLUSTER_GOSSIP_INTERVAL_SECONDS", "1.0")
             ),
+            crdt_enabled=_env_bool("CRDT_ENABLED", False),
+            crdt_replication_factor=int(os.getenv("CRDT_REPLICATION_FACTOR", "3")),
+            crdt_replication_queue_capacity=int(
+                os.getenv("CRDT_REPLICATION_QUEUE_CAPACITY", "500")
+            ),
+            crdt_replication_workers=int(os.getenv("CRDT_REPLICATION_WORKERS", "2")),
+            crdt_replication_retry_max_attempts=int(
+                os.getenv("CRDT_REPLICATION_RETRY_MAX_ATTEMPTS", "3")
+            ),
+            crdt_replication_retry_base_delay_seconds=float(
+                os.getenv("CRDT_REPLICATION_RETRY_BASE_DELAY_SECONDS", "0.05")
+            ),
+            crdt_replication_retry_max_delay_seconds=float(
+                os.getenv("CRDT_REPLICATION_RETRY_MAX_DELAY_SECONDS", "1.0")
+            ),
+            crdt_anti_entropy_interval_seconds=float(
+                os.getenv("CRDT_ANTI_ENTROPY_INTERVAL_SECONDS", "2.0")
+            ),
+            crdt_anti_entropy_batch_size=int(os.getenv("CRDT_ANTI_ENTROPY_BATCH_SIZE", "100")),
         )
