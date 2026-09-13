@@ -32,17 +32,27 @@ from distsys.compute.tasks import (
     sort_task,
 )
 from distsys.compute.worker_pool import WorkerPool
+from distsys.crdt_service import CrdtService
 from distsys.proto import messages_pb2
 from distsys.protocol.codec import decode_task_request, encode_task_response
 from distsys.protocol.errors import DecodeError, ProtocolError
 from distsys.protocol.framing import encode_frame, read_message
 from distsys.protocol.message import Message, MessageType
+from distsys.replication.codec import CrdtResponseData, encode_crdt_response
 from distsys.resilience.backpressure import BackpressureController
 from distsys.resilience.deadline import Deadline, DeadlineExceeded
 from distsys.resilience.rate_limiter import TokenBucketRateLimiter
 from distsys.utils.config import Settings
 
 logger = logging.getLogger("distsys.node")
+
+_CRDT_TYPES = {
+    MessageType.CRDT_MUTATE_REQUEST,
+    MessageType.CRDT_READ_REQUEST,
+    MessageType.CRDT_REPLICATE,
+    MessageType.CRDT_FETCH,
+    MessageType.CRDT_DIGEST,
+}
 
 _CONTROL_TYPES = {
     MessageType.JOIN_REQUEST,
@@ -78,6 +88,7 @@ class DistributedNode:
             burst=settings.rate_limit_burst,
         )
         self.cluster_service: ClusterService | None = None
+        self.crdt_service: CrdtService | None = None
         self._server: asyncio.Server | None = None
         self._connections: set[asyncio.StreamWriter] = set()
         self._handler_tasks: set[asyncio.Task[None]] = set()
@@ -121,7 +132,16 @@ class DistributedNode:
                     execute_local=self._execute_local,
                 )
                 await self.cluster_service.start()
+                if self.settings.crdt_enabled:
+                    self.crdt_service = CrdtService(
+                        settings=self.settings,
+                        cluster_service=self.cluster_service,
+                    )
+                    await self.crdt_service.start()
         except Exception:
+            if self.crdt_service is not None:
+                await self.crdt_service.stop()
+                self.crdt_service = None
             if self.cluster_service is not None:
                 await self.cluster_service.stop()
                 self.cluster_service = None
@@ -154,6 +174,10 @@ class DistributedNode:
         if self._stopping:
             return
         self._stopping = True
+
+        if self.crdt_service is not None:
+            await self.crdt_service.stop()
+            self.crdt_service = None
 
         if self.cluster_service is not None:
             await self.cluster_service.stop()
@@ -292,6 +316,24 @@ class DistributedNode:
                 error_message=str(exc),
             )
 
+    async def _handle_crdt(self, message: Message) -> Message:
+        if self.crdt_service is not None:
+            return await self.crdt_service.handle_message(message)
+        payload = encode_crdt_response(
+            CrdtResponseData(
+                success=False,
+                error_code=messages_pb2.INVALID_REQUEST,
+                error_message="CRDT mode is disabled",
+                served_by=self.settings.node_id,
+            )
+        )
+        return Message.new_response(
+            sender_id=self.settings.node_id,
+            correlation_id=message.correlation_id,
+            msg_type=MessageType.CRDT_RESPONSE,
+            payload=payload,
+        )
+
     async def handle_message(self, message: Message) -> Message:
         started_ns = time.perf_counter_ns()
         task_name = "unknown"
@@ -299,6 +341,9 @@ class DistributedNode:
 
         if message.msg_type in _CONTROL_TYPES:
             return await self._handle_control(message)
+
+        if message.msg_type in _CRDT_TYPES:
+            return await self._handle_crdt(message)
 
         if message.msg_type not in (MessageType.REQUEST, MessageType.FORWARDED_REQUEST):
             return self._response(

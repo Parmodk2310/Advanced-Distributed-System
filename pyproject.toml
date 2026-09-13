@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "advanced-distributed-system"
-version = "0.3.0"
-description = "Phase 3: gossip membership, failure detection, and consistent-hash task routing"
+version = "0.4.0"
+description = "Phase 4: causal consistency, CRDT replication, and anti-entropy recovery"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

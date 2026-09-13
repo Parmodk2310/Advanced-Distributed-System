@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install install-dev proto test lint format quality run smoke phase2-smoke phase3-cluster phase3-smoke
+.PHONY: install install-dev proto test lint format quality run smoke phase2-smoke phase3-cluster phase3-smoke phase4-cluster phase4-smoke
 
 install:
 	$(PYTHON) -m pip install -e .
@@ -44,3 +44,9 @@ phase3-cluster:
 
 phase3-smoke:
 	$(PYTHON) scripts/phase3_smoke.py --host 127.0.0.1 --ports 18000 18001 18002
+
+phase4-cluster:
+	bash scripts/run_phase4_cluster.sh
+
+phase4-smoke:
+	$(PYTHON) scripts/phase4_smoke.py --host 127.0.0.1 --ports 18000 18001 18002
