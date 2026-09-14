@@ -114,118 +114,117 @@ class Metrics:
         ProcessCollector(registry=self.registry)
         PlatformCollector(registry=self.registry)
         GCCollector(registry=self.registry)
-        common = {"registry": self.registry}
         self.requests_total = Counter(
             "distsys_requests_total",
             "Application requests",
             ["node_id", "message_type", "status"],
-            **common,
+            registry=self.registry,
         )
         self.request_duration = Histogram(
             "distsys_request_duration_seconds",
             "Application request latency",
             ["node_id", "message_type"],
             buckets=HISTOGRAM_BUCKETS,
-            **common,
+            registry=self.registry,
         )
         self.requests_inflight = Gauge(
             "distsys_requests_inflight",
             "Requests currently executing",
             ["node_id"],
-            **common,
+            registry=self.registry,
         )
         self.rate_limited_total = Counter(
-            "distsys_rate_limited_total", "Rate-limited requests", ["node_id"], **common
+            "distsys_rate_limited_total", "Rate-limited requests", ["node_id"], registry=self.registry
         )
         self.overloaded_total = Counter(
             "distsys_overloaded_total",
             "Overload events",
             ["node_id", "component"],
-            **common,
+            registry=self.registry,
         )
         self.members = Gauge(
             "distsys_members",
             "Cluster members by status",
             ["node_id", "status"],
-            **common,
+            registry=self.registry,
         )
         self.gossip_failures_total = Counter(
-            "distsys_gossip_failures_total", "Gossip failures", ["node_id"], **common
+            "distsys_gossip_failures_total", "Gossip failures", ["node_id"], registry=self.registry
         )
         self.peer_rpc_total = Counter(
             "distsys_peer_rpc_total",
             "Peer RPC outcomes",
             ["node_id", "operation", "status"],
-            **common,
+            registry=self.registry,
         )
         self.peer_rpc_duration = Histogram(
             "distsys_peer_rpc_duration_seconds",
             "Peer RPC latency",
             ["node_id", "operation"],
             buckets=HISTOGRAM_BUCKETS,
-            **common,
+            registry=self.registry,
         )
         self.replication_queue_depth = Gauge(
             "distsys_replication_queue_depth",
             "Replication queue depth",
             ["node_id"],
-            **common,
+            registry=self.registry,
         )
         self.replication_total = Counter(
             "distsys_replication_total",
             "Replication outcomes",
             ["node_id", "status"],
-            **common,
+            registry=self.registry,
         )
         self.anti_entropy_repairs_total = Counter(
             "distsys_anti_entropy_repairs_total",
             "Anti-entropy repairs",
             ["node_id", "result"],
-            **common,
+            registry=self.registry,
         )
         self.causal_repairs_total = Counter(
             "distsys_causal_repairs_total",
             "Causal repairs",
             ["node_id", "result"],
-            **common,
+            registry=self.registry,
         )
         self.persistence_duration = Histogram(
             "distsys_persistence_duration_seconds",
             "Persistence operation latency",
             ["node_id", "operation"],
             buckets=HISTOGRAM_BUCKETS,
-            **common,
+            registry=self.registry,
         )
         self.persistence_failures_total = Counter(
             "distsys_persistence_failures_total",
             "Persistence failures",
             ["node_id", "operation"],
-            **common,
+            registry=self.registry,
         )
         self.recovery_phase = Gauge(
             "distsys_recovery_phase",
             "Current recovery phase (one-hot)",
             ["node_id", "phase"],
-            **common,
+            registry=self.registry,
         )
         self.recovery_duration = Histogram(
             "distsys_recovery_duration_seconds",
             "Recovery duration",
             ["node_id", "result"],
             buckets=HISTOGRAM_BUCKETS,
-            **common,
+            registry=self.registry,
         )
         self.coordination_healthy = Gauge(
             "distsys_coordination_healthy",
             "Coordination health (1 healthy)",
             ["node_id"],
-            **common,
+            registry=self.registry,
         )
         self.coordination_failures_total = Counter(
             "distsys_coordination_failures_total",
             "Coordination failures",
             ["node_id", "operation"],
-            **common,
+            registry=self.registry,
         )
 
         for status in ("alive", "suspect", "dead", "other"):
