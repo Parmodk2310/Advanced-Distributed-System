@@ -69,18 +69,22 @@ ORSET: CrdtType
 MVREGISTER: CrdtType
 
 class Envelope(_message.Message):
-    __slots__ = ("sender_id", "correlation_id", "timestamp_ms", "ttl", "payload")
+    __slots__ = ("sender_id", "correlation_id", "timestamp_ms", "ttl", "payload", "traceparent", "tracestate")
     SENDER_ID_FIELD_NUMBER: _ClassVar[int]
     CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_MS_FIELD_NUMBER: _ClassVar[int]
     TTL_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    TRACEPARENT_FIELD_NUMBER: _ClassVar[int]
+    TRACESTATE_FIELD_NUMBER: _ClassVar[int]
     sender_id: str
     correlation_id: str
     timestamp_ms: int
     ttl: int
     payload: bytes
-    def __init__(self, sender_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., timestamp_ms: _Optional[int] = ..., ttl: _Optional[int] = ..., payload: _Optional[bytes] = ...) -> None: ...
+    traceparent: str
+    tracestate: str
+    def __init__(self, sender_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., timestamp_ms: _Optional[int] = ..., ttl: _Optional[int] = ..., payload: _Optional[bytes] = ..., traceparent: _Optional[str] = ..., tracestate: _Optional[str] = ...) -> None: ...
 
 class TaskRequest(_message.Message):
     __slots__ = ("task_name", "payload_json", "routing_key")

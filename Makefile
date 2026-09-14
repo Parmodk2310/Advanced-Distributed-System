@@ -94,3 +94,32 @@ phase5-etcd-smoke:
 
 phase5-secure-smoke:
 	bash scripts/phase5_verify.sh
+
+.PHONY: phase6-monitoring-up phase6-monitoring-down phase6-cluster \
+	phase6-observability-smoke phase6-chaos phase6-benchmark phase6-release-gate
+
+phase6-monitoring-up:
+	docker compose -p distsys-phase6 -f deploy/monitoring/docker-compose.yml up -d
+
+phase6-monitoring-down:
+	docker compose -p distsys-phase6 -f deploy/monitoring/docker-compose.yml down -v
+
+phase6-cluster:
+	bash scripts/run_phase6_cluster.sh
+
+phase6-observability-smoke:
+	PYTHONPATH=src $(PYTHON) scripts/phase6_observability_smoke.py
+	PYTHONPATH=src $(PYTHON) scripts/phase6_monitoring_smoke.py --cert-dir certs/generated
+
+phase6-chaos:
+	RUN_CHAOS_TESTS=1 PYTHONPATH=src $(PYTHON) scripts/chaos.py network-delay --target node-1
+	RUN_CHAOS_TESTS=1 PYTHONPATH=src $(PYTHON) scripts/chaos.py partition --target node-1
+	RUN_CHAOS_TESTS=1 PYTHONPATH=src $(PYTHON) scripts/chaos.py etcd-outage --target node-1
+	RUN_CHAOS_TESTS=1 PYTHONPATH=src $(PYTHON) scripts/chaos.py node-kill --target node-1
+
+phase6-benchmark:
+	RUN_PERFORMANCE_TESTS=1 PYTHONPATH=src $(PYTHON) scripts/benchmark.py --profile quick --workload task
+	RUN_PERFORMANCE_TESTS=1 PYTHONPATH=src $(PYTHON) scripts/benchmark.py --profile quick --workload crdt
+
+phase6-release-gate:
+	bash scripts/phase6_release_gate.sh

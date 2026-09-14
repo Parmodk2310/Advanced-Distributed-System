@@ -1,0 +1,19 @@
+flowchart LR
+    Client["Smoke / benchmark client"] -->|"TLS 1.3 + mTLS"| Proxy["Toxiproxy peer paths"]
+    Proxy --> N0["node-0\napp 18000 | obs 9100"]
+    Proxy --> N1["node-1\napp 18001 | obs 9101"]
+    Proxy --> N2["node-2\napp 18002 | obs 9102"]
+
+    N0 & N1 & N2 -->|"OTLP/HTTP traces :4318"| Collector["OpenTelemetry Collector"]
+    Collector -->|"OTLP/gRPC"| Tempo["Tempo 3.0.2"]
+
+    N0 & N1 & N2 -->|"/metrics + health"| Prom["Prometheus 3.13.3 LTS"]
+    Prom --> Grafana["Grafana 13.2.1"]
+    Tempo --> Grafana
+
+    Chaos["Guarded chaos controller\nRUN_CHAOS_TESTS=1"] -->|"latency / partition"| Proxy
+    Chaos -->|"managed PID only"| N1
+    Chaos -->|"scoped compose stop/start"| Etcd["etcd v3.6.14"]
+    Proxy -->|"etcd proxy :12379"| Etcd
+
+    N0 & N1 & N2 --> Storage["SQLite durable CRDT state"]

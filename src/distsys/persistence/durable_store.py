@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import time
+from typing import Any
+
 from distsys.causal import CausalClock, VersionVector
 from distsys.crdt import CrdtType
 from distsys.persistence.models import DurableCausalState
@@ -21,6 +24,7 @@ class DurableCrdtStore:
         self.memory = memory
         self.repository = repository
         self.clock = clock
+        self.metrics: Any | None = None
 
     def key_lock(self, key: str):
         return self.memory.key_lock(key)
@@ -59,7 +63,15 @@ class DurableCrdtStore:
             local_counter=frontier.get(self.clock.actor),
             frontier=frontier,
         )
-        await self.repository.commit_mutation(entry, causal_state, deadline)
+        started = time.perf_counter()
+        try:
+            await self.repository.commit_mutation(entry, causal_state, deadline)
+        except Exception:
+            if self.metrics is not None:
+                self.metrics.persistence("write", time.perf_counter() - started, failed=True)
+            raise
+        if self.metrics is not None:
+            self.metrics.persistence("write", time.perf_counter() - started)
         return await self.memory.replace(entry, expected_type=entry.crdt_type)
 
     async def merge_entry(self, incoming: StoredCrdtEntry) -> StoredCrdtEntry:

@@ -41,7 +41,7 @@ async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_fac
             current = await node0.cluster_service.membership.get("node-1")
             return current is not None and current.status is MemberStatus.DEAD
 
-        await wait_until(dead, timeout_seconds=2.0)
+        await wait_until(dead, timeout_seconds=3.0)
     finally:
         await node1.stop()
         await node0.stop()

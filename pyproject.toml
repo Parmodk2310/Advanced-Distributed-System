@@ -4,13 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "advanced-distributed-system"
-version = "0.5.0"
-description = "Phase 5: secure persistence, restart recovery, etcd coordination, and mTLS"
+version = "0.6.0"
+description = "Phase 6: observable, fault-tested distributed infrastructure for reliable AI/ML services"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "protobuf>=4.25,<7",
   "etcd3gw>=2.7,<3",
+  "prometheus-client>=0.20,<1",
+  "opentelemetry-api>=1.27,<2",
+  "opentelemetry-sdk>=1.27,<2",
+  "opentelemetry-exporter-otlp-proto-http>=1.27,<2",
+  "httpx>=0.27,<1",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +27,7 @@ dev = [
   "mypy>=1.10",
   "grpcio-tools==1.81.1",
   "types-protobuf==7.35.1.20260906",
+  "PyYAML>=6.0,<7",
 ]
 
 [project.scripts]
@@ -38,6 +44,8 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
   "etcd: requires RUN_ETCD_INTEGRATION=1 and a live local etcd service",
+  "chaos: requires RUN_CHAOS_TESTS=1 and the dedicated Phase 6 stack",
+  "performance: requires RUN_PERFORMANCE_TESTS=1 and the dedicated Phase 6 stack",
 ]
 
 [tool.ruff]

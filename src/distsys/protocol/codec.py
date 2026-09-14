@@ -36,6 +36,8 @@ def encode_envelope(message: Message) -> bytes:
         timestamp_ms=message.timestamp_ms,
         ttl=message.ttl,
         payload=message.payload,
+        traceparent=message.traceparent,
+        tracestate=message.tracestate,
     )
     return envelope.SerializeToString()
 
@@ -59,6 +61,8 @@ def decode_envelope(msg_type: MessageType, data: bytes) -> Message:
         timestamp_ms=envelope.timestamp_ms,
         ttl=envelope.ttl,
         payload=envelope.payload,
+        traceparent=envelope.traceparent,
+        tracestate=envelope.tracestate,
     )
 
 

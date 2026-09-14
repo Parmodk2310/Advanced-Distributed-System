@@ -94,6 +94,16 @@ class Settings:
     tls_key_file: str = ""
     tls_min_version: str = "TLSv1.3"
 
+    observability_enabled: bool = False
+    observability_host: str = "127.0.0.1"
+    observability_port: int = 9100
+    metrics_enabled: bool = True
+    tracing_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = "http://127.0.0.1:4318"
+    otel_service_name: str = "distsys-node"
+    otel_trace_sample_ratio: float = 0.10
+    otel_export_timeout_seconds: float = 2.0
+
     def __post_init__(self) -> None:
         if self.cpu_workers < 1:
             raise ValueError("cpu_workers must be at least 1")
@@ -170,6 +180,15 @@ class Settings:
             raise ValueError("Phase 5 secure profile requires TLSv1.3")
         if self.tls_enabled and not (self.tls_ca_file and self.tls_cert_file and self.tls_key_file):
             raise ValueError("TLS_ENABLED requires CA, certificate, and private-key files")
+
+        if not 1 <= self.observability_port <= 65535:
+            raise ValueError("observability_port must be in 1..65535")
+        if not 0.0 <= self.otel_trace_sample_ratio <= 1.0:
+            raise ValueError("otel_trace_sample_ratio must be in [0.0, 1.0]")
+        if self.otel_export_timeout_seconds <= 0:
+            raise ValueError("otel_export_timeout_seconds must be greater than zero")
+        if not self.otel_service_name.strip():
+            raise ValueError("otel_service_name must not be empty")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -252,4 +271,15 @@ class Settings:
             tls_cert_file=os.getenv("TLS_CERT_FILE", ""),
             tls_key_file=os.getenv("TLS_KEY_FILE", ""),
             tls_min_version=os.getenv("TLS_MIN_VERSION", "TLSv1.3"),
+            observability_enabled=_env_bool("OBSERVABILITY_ENABLED", False),
+            observability_host=os.getenv("OBSERVABILITY_HOST", "127.0.0.1"),
+            observability_port=int(os.getenv("OBSERVABILITY_PORT", "9100")),
+            metrics_enabled=_env_bool("METRICS_ENABLED", True),
+            tracing_enabled=_env_bool("TRACING_ENABLED", False),
+            otel_exporter_otlp_endpoint=os.getenv(
+                "OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318"
+            ),
+            otel_service_name=os.getenv("OTEL_SERVICE_NAME", "distsys-node"),
+            otel_trace_sample_ratio=float(os.getenv("OTEL_TRACE_SAMPLE_RATIO", "0.10")),
+            otel_export_timeout_seconds=float(os.getenv("OTEL_EXPORT_TIMEOUT_SECONDS", "2.0")),
         )

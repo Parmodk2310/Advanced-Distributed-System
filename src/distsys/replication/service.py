@@ -72,6 +72,7 @@ class ReplicationService:
         )
         self._replicator_started = False
         self._anti_entropy_started = False
+        self.metrics: Any | None = None
 
     async def start_fast_path(self) -> None:
         if self._replicator_started:
@@ -103,10 +104,15 @@ class ReplicationService:
         replica_ids: tuple[str, ...],
     ) -> OutboxReservation:
         pairs = tuple((node_id, key) for node_id in replica_ids if node_id != self.local_node_id)
-        return await self.outbox.reserve(pairs)
+        reservation = await self.outbox.reserve(pairs)
+        if self.metrics is not None:
+            self.metrics.set_replication_queue_depth(await self.outbox.pending_count())
+        return reservation
 
     async def cancel_write(self, reservation: OutboxReservation) -> None:
         await self.outbox.cancel(reservation)
+        if self.metrics is not None:
+            self.metrics.set_replication_queue_depth(await self.outbox.pending_count())
 
     async def publish_write(
         self,
@@ -114,6 +120,8 @@ class ReplicationService:
         entry: StoredCrdtEntry,
     ) -> None:
         await self.outbox.publish(reservation, {entry.key: entry})
+        if self.metrics is not None:
+            self.metrics.set_replication_queue_depth(await self.outbox.pending_count())
 
     async def merge_replica_state(self, entry: StoredCrdtEntry) -> StoredCrdtEntry:
         return await self.store.merge_entry(entry)
@@ -124,7 +132,15 @@ class ReplicationService:
         required: VersionVector,
         deadline: Deadline,
     ) -> CausalRepairResult:
-        return await self.repair.ensure(key, required, deadline)
+        try:
+            result = await self.repair.ensure(key, required, deadline)
+        except Exception:
+            if self.metrics is not None:
+                self.metrics.causal_repair("failure")
+            raise
+        if self.metrics is not None:
+            self.metrics.causal_repair("success" if result.contacted_nodes else "skipped")
+        return result
 
     async def merge_metadata(
         self,
@@ -138,7 +154,15 @@ class ReplicationService:
         peer: ClusterMember,
         keys: tuple[str, ...] | None = None,
     ) -> object:
-        return await self.anti_entropy.reconcile_peer(peer, keys)
+        try:
+            result = await self.anti_entropy.reconcile_peer(peer, keys)
+        except Exception:
+            if self.metrics is not None:
+                self.metrics.anti_entropy_repair("failure")
+            raise
+        if self.metrics is not None:
+            self.metrics.anti_entropy_repair("success")
+        return result
 
     async def digest_snapshot(
         self,
