@@ -42,7 +42,7 @@ _CONTROL_TYPES = {
     MessageType.GOSSIP,
 }
 
-_ERROR_STATUS = {
+_ERROR_STATUS: dict[int, str] = {
     messages_pb2.TIMEOUT: "timeout",
     messages_pb2.OVERLOADED: "overloaded",
     messages_pb2.RATE_LIMITED: "rate_limited",
