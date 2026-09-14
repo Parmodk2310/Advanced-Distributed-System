@@ -109,7 +109,7 @@ async def main() -> int:
         latency: float | None = None
         started = time.perf_counter()
         try:
-            ack = await peer.ping(target_member, (), timeout_seconds=0.9)
+            ack = await peer.ping(target_member, (), timeout_seconds=2.0)
             reachable = bool(ack.success)
             latency = time.perf_counter() - started
         except Exception:  # noqa: BLE001 - reachability probe records any peer failure
