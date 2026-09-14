@@ -14,6 +14,7 @@ cleanup(){
 trap cleanup EXIT INT TERM
 
 env -u RUN_CHAOS_TESTS -u PHASE6_PEER_PROXY_MAP make quality
+mkdir -p .phase6-logs
 bash scripts/run_phase6_cluster.sh >.phase6-logs/runner.log 2>&1 &
 RUNNER_PID=$!
 for _ in $(seq 1 90); do
