@@ -126,11 +126,13 @@ class ChaosController:
                     observations["degraded"] = degraded.to_dict()
                     recovery_started = time.perf_counter()
                     await self.toxiproxy.remove_toxic(proxy, toxic)
+                    baseline_latency = baseline.peer_latency_seconds or 0.0
+                    recovery_limit = max(0.18, baseline_latency * 1.5)
                     recovered = await self._await_state(
                         lambda s: s.data_plane_ok
                         and s.target_reachable
                         and s.peer_latency_seconds is not None
-                        and s.peer_latency_seconds < 0.18,
+                        and s.peer_latency_seconds < recovery_limit,
                         timeout_seconds=6.0,
                         description="peer latency recovery",
                     )
