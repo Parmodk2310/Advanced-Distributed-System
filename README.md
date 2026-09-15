@@ -1,5 +1,7 @@
 # Advanced Distributed System
 
+[![Quality](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml)
+
 **Correctness-first distributed infrastructure for reliable AI/ML services.**
 
 A seven-phase distributed-systems engineering project that evolves from a bounded asynchronous execution engine into a secure, durable, observable, fault-tested multi-node platform.
