@@ -12,7 +12,7 @@ from pathlib import Path
 
 from distsys.chaos.controller import ChaosController
 from distsys.chaos.model import ProbeState
-from distsys.chaos.safety import ManagedManifest
+from distsys.chaos.safety import ManagedManifest, require_chaos_opt_in
 from distsys.chaos.toxiproxy import ToxiproxyClient
 from distsys.client import DistributedClient
 from distsys.cluster.member import ClusterMember, MemberStatus
@@ -53,7 +53,7 @@ async def main() -> int:
     parser.add_argument("--cert-dir", type=Path, default=Path("certs/generated"))
     args = parser.parse_args()
 
-    os.environ.setdefault("RUN_CHAOS_TESTS", "1")
+    require_chaos_opt_in()
     os.environ.setdefault("PHASE6_PEER_PROXY_MAP", PROXY_MAP)
     cert_dir = args.cert_dir.resolve()
     settings = Settings(
