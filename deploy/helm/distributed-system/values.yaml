@@ -1,0 +1,59 @@
+replicaCount: 3
+releaseMode: false
+
+image:
+  repository: distsys-node
+  tag: phase7-local
+  digest: ""
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  protocolPort: 8000
+  observabilityPort: 9100
+
+cluster:
+  replicationFactor: 3
+
+etcd:
+  endpoints: http://etcd:2379
+
+tls:
+  enabled: true
+  mtlsRequired: true
+  secretName: distsys-node-tls
+  mountPath: /var/run/distsys/tls
+
+observability:
+  enabled: true
+  tracingEnabled: false
+  otlpEndpoint: http://otel-collector:4318
+
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 1Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+podDisruptionBudget:
+  minAvailable: 2
+
+terminationGracePeriodSeconds: 30
+
+networkPolicy:
+  enabled: true
+  dnsNamespaceSelector:
+    kubernetes.io/metadata.name: kube-system
+
+publicEndpoint:
+  enabled: false

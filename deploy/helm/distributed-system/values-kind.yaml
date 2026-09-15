@@ -1,0 +1,16 @@
+releaseMode: false
+
+image:
+  repository: distsys-node
+  tag: phase7-local
+  pullPolicy: IfNotPresent
+
+persistence:
+  storageClass: standard
+  size: 512Mi
+
+observability:
+  tracingEnabled: false
+
+publicEndpoint:
+  enabled: false

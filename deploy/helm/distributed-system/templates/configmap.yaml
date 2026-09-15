@@ -1,0 +1,30 @@
+{{- include "distributed-system.validate" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "distributed-system.fullname" . }}
+  labels:
+    {{- include "distributed-system.labels" . | nindent 4 }}
+data:
+  NODE_HOST: "0.0.0.0"
+  NODE_PORT: {{ .Values.service.protocolPort | quote }}
+  CLUSTER_ENABLED: "true"
+  CLUSTER_SEEDS: {{ printf "%s-0.%s-headless:%d,%s-1.%s-headless:%d,%s-2.%s-headless:%d" (include "distributed-system.fullname" .) (include "distributed-system.fullname" .) (int .Values.service.protocolPort) (include "distributed-system.fullname" .) (include "distributed-system.fullname" .) (int .Values.service.protocolPort) (include "distributed-system.fullname" .) (include "distributed-system.fullname" .) (int .Values.service.protocolPort) | quote }}
+  CRDT_ENABLED: "true"
+  CRDT_REPLICATION_FACTOR: {{ .Values.cluster.replicationFactor | quote }}
+  PERSISTENCE_ENABLED: {{ .Values.persistence.enabled | quote }}
+  PERSISTENCE_DB_PATH: "/data/node.db"
+  ETCD_ENABLED: "true"
+  ETCD_ENDPOINTS: {{ .Values.etcd.endpoints | quote }}
+  TLS_ENABLED: {{ .Values.tls.enabled | quote }}
+  MTLS_REQUIRED: {{ .Values.tls.mtlsRequired | quote }}
+  TLS_MIN_VERSION: "TLSv1.3"
+  TLS_CA_FILE: {{ printf "%s/ca.crt" .Values.tls.mountPath | quote }}
+  TLS_CERT_FILE: {{ printf "%s/tls.crt" .Values.tls.mountPath | quote }}
+  TLS_KEY_FILE: {{ printf "%s/tls.key" .Values.tls.mountPath | quote }}
+  OBSERVABILITY_ENABLED: {{ .Values.observability.enabled | quote }}
+  OBSERVABILITY_HOST: "0.0.0.0"
+  OBSERVABILITY_PORT: {{ .Values.service.observabilityPort | quote }}
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: {{ .Values.observability.tracingEnabled | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.otlpEndpoint | quote }}

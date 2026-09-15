@@ -1,0 +1,61 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "distributed-system.fullname" . }}-default-deny
+  labels:
+    {{- include "distributed-system.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "distributed-system.selectorLabels" . | nindent 6 }}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "distributed-system.fullname" . }}-allow-required
+  labels:
+    {{- include "distributed-system.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "distributed-system.selectorLabels" . | nindent 6 }}
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "distributed-system.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.protocolPort }}
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.observabilityPort }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "distributed-system.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.protocolPort }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.dnsNamespaceSelector | nindent 14 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 2379
+        - protocol: TCP
+          port: 4318
+{{- end }}

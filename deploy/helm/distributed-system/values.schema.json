@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["replicaCount", "releaseMode", "image", "cluster", "tls", "publicEndpoint"],
+  "properties": {
+    "replicaCount": {"type": "integer", "minimum": 3},
+    "releaseMode": {"type": "boolean"},
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag", "digest", "pullPolicy"],
+      "properties": {
+        "repository": {"type": "string"},
+        "tag": {"type": "string"},
+        "digest": {"type": "string", "pattern": "^$|^sha256:[0-9a-f]{64}$"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      },
+      "additionalProperties": false
+    },
+    "cluster": {
+      "type": "object",
+      "required": ["replicationFactor"],
+      "properties": {"replicationFactor": {"type": "integer", "minimum": 1}},
+      "additionalProperties": false
+    },
+    "tls": {
+      "type": "object",
+      "required": ["enabled", "mtlsRequired", "secretName", "mountPath"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "mtlsRequired": {"type": "boolean"},
+        "secretName": {"type": "string", "minLength": 1},
+        "mountPath": {"type": "string", "pattern": "^/"}
+      }
+    },
+    "publicEndpoint": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {"enabled": {"const": false}}
+    }
+  }
+}

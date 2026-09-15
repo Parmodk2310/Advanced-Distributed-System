@@ -1,0 +1,7 @@
+apiVersion: v2
+name: distributed-system
+description: Phase 7 delivery chart for the Advanced Distributed System
+type: application
+version: 0.7.0
+appVersion: "0.6.0"
+kubeVersion: ">=1.29.0-0"

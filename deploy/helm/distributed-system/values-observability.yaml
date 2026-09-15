@@ -1,0 +1,4 @@
+observability:
+  enabled: true
+  tracingEnabled: true
+  otlpEndpoint: http://otel-collector:4318

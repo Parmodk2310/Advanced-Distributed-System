@@ -1,0 +1,14 @@
+releaseMode: true
+
+image:
+  repository: ""
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+
+persistence:
+  storageClass: gp3
+  size: 2Gi
+
+publicEndpoint:
+  enabled: false

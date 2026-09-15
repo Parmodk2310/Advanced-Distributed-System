@@ -12,6 +12,8 @@ on:
       - requirements.txt
       - src/**
       - tests/deployment/test_container_contract.py
+      - tests/deployment/test_helm_contract.py
+      - deploy/helm/**
       - .github/workflows/phase7-image-publish.yml
 
 concurrency:
@@ -43,9 +45,29 @@ jobs:
 
       - name: Verify container contract
         run: |
-          python -m pytest tests/deployment/test_container_contract.py -q
-          python -m ruff check tests/deployment/test_container_contract.py
-          python -m black --check tests/deployment/test_container_contract.py
+          python -m pytest tests/deployment/test_container_contract.py tests/deployment/test_helm_contract.py -q
+          python -m ruff check tests/deployment
+          python -m black --check tests/deployment
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Validate Helm release contract
+        run: |
+          helm lint deploy/helm/distributed-system \
+            --values deploy/helm/distributed-system/values-kind.yaml
+          helm template phase7 deploy/helm/distributed-system \
+            --namespace distsys \
+            --values deploy/helm/distributed-system/values-kind.yaml \
+            > /tmp/phase7-kind.yaml
+          helm template phase7 deploy/helm/distributed-system \
+            --namespace distsys \
+            --values deploy/helm/distributed-system/values-eks.yaml \
+            --set image.repository=example.invalid/distsys-node \
+            --set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            > /tmp/phase7-eks.yaml
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
