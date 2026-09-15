@@ -1,0 +1,59 @@
+replicaCount: 3
+
+image:
+  repository: distsys-node
+  tag: phase7-local
+  digest: ""
+  pullPolicy: IfNotPresent
+  releaseMode: false
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: ClusterIP
+  protocolPort: 8000
+  metricsPort: 9100
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+
+tls:
+  enabled: true
+  secretName: distsys-node-tls
+
+etcd:
+  endpoints: http://etcd:2379
+
+cluster:
+  virtualNodes: 64
+  probeIntervalSeconds: 1.0
+  pingTimeoutSeconds: 0.75
+  indirectTimeoutSeconds: 1.5
+  suspicionTimeoutSeconds: 4.0
+  deadRetentionSeconds: 30.0
+
+crdt:
+  replicationFactor: 3
+  antiEntropyIntervalSeconds: 2.0
+
+observability:
+  enabled: true
+  tracingEnabled: false
+  otlpEndpoint: http://otel-collector:4318
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+podDisruptionBudget:
+  minAvailable: 2
+
+terminationGracePeriodSeconds: 30
