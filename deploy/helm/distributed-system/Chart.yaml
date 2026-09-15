@@ -1,0 +1,7 @@
+apiVersion: v2
+name: distributed-system
+description: Correctness-first distributed infrastructure for reliable AI/ML services
+type: application
+version: 0.7.0
+appVersion: "0.6.0"
+kubeVersion: ">=1.29.0-0"
