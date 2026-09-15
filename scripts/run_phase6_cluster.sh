@@ -7,7 +7,7 @@ LOG_DIR="${PHASE6_LOG_DIR:-$ROOT/.phase6-logs}"
 mkdir -p "$LOG_DIR"
 
 cleanup() {
-  trap - EXIT INT TERM
+  trap - EXIT
   if [[ -f "$LOG_DIR/manifest.json" ]]; then
     python - "$LOG_DIR/manifest.json" <<'PY'
 import json,os,signal,sys,time
@@ -26,7 +26,15 @@ PY
   fi
   "${COMPOSE[@]}" down -v >/dev/null 2>&1 || true
 }
-trap cleanup EXIT INT TERM
+
+terminate() {
+  trap - INT TERM
+  cleanup
+  exit 0
+}
+
+trap cleanup EXIT
+trap terminate INT TERM
 
 for port in 18000 18001 18002 9100 9101 9102 12379 19100 19101 19102 3000 3200 4318 8474 9090; do
   if ss -ltn "sport = :$port" 2>/dev/null | grep -q LISTEN; then
