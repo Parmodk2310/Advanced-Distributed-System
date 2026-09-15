@@ -59,9 +59,13 @@ CI builds one node image from a pinned Python 3.12 base image. The image:
 
 The same image digest must be used by local verification and the EKS demonstration. A rebuild is a new artifact and must repeat the gates.
 
+GitHub Container Registry (GHCR) is the canonical registry. CI publishes the verified image to GHCR and records the source commit, SBOM, scan result, provenance, and SHA-256 digest. After the AWS approval gate, the deployment workflow copies that exact digest into Amazon ECR without rebuilding it. The ECR digest deployed to EKS must resolve to the same manifest content as the approved GHCR artifact.
+
 ### Local Kubernetes
 
 `kind` is the required local runtime because it is compatible with Docker/WSL, appropriate for a 16-GB development laptop, and reproducible in GitHub Actions.
+
+`k3d` is an optional developer convenience path. It uses the same Helm chart, security contract, image digest, and smoke tests as `kind`; it is not a separate deployment implementation and is not required in CI.
 
 The default local profile uses:
 
@@ -161,6 +165,10 @@ Terraform owns AWS infrastructure only:
 
 The low-cost design avoids a NAT Gateway unless the reviewed dependency path proves it necessary. Public/private subnet choices, VPC endpoints, load balancers, and public IPv4 addresses must appear explicitly in the cost review.
 
+The approved demonstration profile uses a cost-controlled VPC with public worker-node networking, tightly restricted security groups, and no NAT Gateway. The default managed node group uses one on-demand `t3.medium` node with desired/minimum/maximum sizes of `1/1/2`. This is a temporary demonstration compromise, not the recommended production topology; a production deployment should normally use private worker nodes and a separately reviewed egress design.
+
+Application verification begins without a public application endpoint and uses `kubectl port-forward`. Only after the private checks pass may the workflow create a temporary AWS Load Balancer for health, routing, observability, scaling, and rollback evidence. The load balancer must be deleted before final cluster destruction. Kubernetes API and application access must be restricted to the approved operator and workflow paths.
+
 Terraform state must use a documented remote-state bootstrap for Phase 7B. State files, plans containing sensitive values, credentials, and kubeconfig files must never be committed.
 
 ## CI/CD gates
@@ -169,15 +177,17 @@ Existing Python quality checks remain mandatory. Phase 7 adds:
 
 1. Dockerfile lint and deterministic image build.
 2. Software bill of materials generation.
-3. Secret, dependency, filesystem, and image scanning.
+3. Secret, dependency, filesystem, and image scanning plus artifact provenance and signing when the configured identity supports it.
 4. Helm lint, template rendering, schema checks, and policy validation.
 5. kind cluster creation with guaranteed cleanup.
 6. installation of the exact locally built image and Helm chart.
 7. rollout, health, mTLS, persistence, and restart smoke tests.
 8. rollback verification between two known chart revisions.
 9. Terraform format, validate, documentation, and security checks.
-10. an AWS-plan workflow protected by explicit enablement and environment approval.
-11. a separate manually dispatched EKS apply/destroy workflow for Phase 7B.
+10. publication of the verified digest to GHCR.
+11. an AWS-plan workflow protected by explicit enablement and environment approval.
+12. digest-preserving promotion from GHCR to ECR after approval.
+13. a separate manually dispatched EKS apply/destroy workflow for Phase 7B.
 
 CI must use least-privilege permissions. AWS authentication uses GitHub OpenID Connect and an assumable role; long-lived AWS keys are prohibited.
 
@@ -227,8 +237,10 @@ After separate approval:
 
 - the reviewed Terraform plan matches the applied resources;
 - budget and ownership tags exist before or with billable infrastructure;
-- ECR promotion uses the verified digest;
+- ECR promotion copies the verified GHCR digest without rebuilding and verifies manifest equivalence;
 - EKS rollout passes the same Helm and smoke contracts;
+- private `kubectl port-forward` verification passes before public exposure;
+- a temporary AWS Load Balancer passes health and routing checks and is then removed;
 - observability, restart, rollout, and rollback evidence is captured;
 - `terraform destroy` succeeds;
 - follow-up checks confirm no Phase 7 cluster, node group, load balancer, NAT Gateway, unattached volume, elastic IP, or other tagged billable resource remains.
@@ -248,6 +260,7 @@ Dockerfile
 deploy/
   helm/distributed-system/
   kind/
+  k3d/
   terraform/aws/
 scripts/
   phase7/
@@ -259,7 +272,7 @@ docs/
   runbooks/
 ```
 
-The AWS deploy workflow must be inert by default and require manual dispatch, an explicit enablement variable, a protected GitHub environment, and approval of the exact plan artifact.
+The AWS deploy workflow must be inert by default and require manual dispatch, an explicit enablement variable, a protected GitHub environment, and approval of the exact plan artifact. Its normal sequence is plan review, budget guard creation, ECR promotion, EKS creation, Helm deployment, private verification, temporary load-balancer verification, resilience and rollback checks, evidence capture, destroy, and zero-resource verification. Cleanup must still run after a failed verification step.
 
 ## Documentation and evidence
 
