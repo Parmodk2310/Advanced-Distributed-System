@@ -1,0 +1,70 @@
+name: Phase 7 Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - pyproject.toml
+      - requirements.txt
+      - src/**
+      - tests/deployment/test_container_contract.py
+      - .github/workflows/phase7-image-publish.yml
+
+concurrency:
+  group: phase7-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify-image:
+    name: Build and inspect immutable image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install contract-test dependencies
+        run: python -m pip install --disable-pip-version-check pytest ruff black
+
+      - name: Verify container contract
+        run: |
+          python -m pytest tests/deployment/test_container_contract.py -q
+          python -m ruff check tests/deployment/test_container_contract.py
+          python -m black --check tests/deployment/test_container_contract.py
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image into Docker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          pull: true
+          push: false
+          tags: distsys-node:phase7-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Inspect and smoke-test image
+        env:
+          IMAGE: distsys-node:phase7-${{ github.sha }}
+        run: |
+          test "$(docker image inspect "$IMAGE" --format '{{.Config.User}}')" = "10001:10001"
+          test "$(docker image inspect "$IMAGE" --format '{{json .Config.Entrypoint}}')" = '["python","-m","distsys.main"]'
+          docker run --rm --entrypoint python "$IMAGE" -c 'import distsys; print("import-ok")'
