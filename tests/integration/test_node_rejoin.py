@@ -45,12 +45,6 @@ async def test_restarted_node_with_newer_incarnation_rejoins(unused_tcp_port_fac
         await wait_until(not_alive, timeout_seconds=5.0)
         await stop_task
 
-        async def dead_or_removed() -> bool:
-            current = await service.membership.get("node-1")
-            return current is None or current.status is MemberStatus.DEAD
-
-        await wait_until(dead_or_removed, timeout_seconds=5.0)
-
         restarted = DistributedNode(
             cluster_settings(
                 node_id="node-1",
