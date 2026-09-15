@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "distributed-system.fullname" . }}-config
+  labels:
+    {{- include "distributed-system.labels" . | nindent 4 }}
+data:
+  NODE_HOST: "0.0.0.0"
+  NODE_PORT: {{ .Values.service.protocolPort | quote }}
+  CPU_WORKERS: "1"
+  CPU_QUEUE_CAPACITY: "100"
+  CLUSTER_ENABLED: "true"
+  CLUSTER_VIRTUAL_NODES: {{ .Values.cluster.virtualNodes | quote }}
+  CLUSTER_PROBE_INTERVAL_SECONDS: {{ .Values.cluster.probeIntervalSeconds | quote }}
+  CLUSTER_PING_TIMEOUT_SECONDS: {{ .Values.cluster.pingTimeoutSeconds | quote }}
+  CLUSTER_INDIRECT_TIMEOUT_SECONDS: {{ .Values.cluster.indirectTimeoutSeconds | quote }}
+  CLUSTER_SUSPICION_TIMEOUT_SECONDS: {{ .Values.cluster.suspicionTimeoutSeconds | quote }}
+  CLUSTER_DEAD_RETENTION_SECONDS: {{ .Values.cluster.deadRetentionSeconds | quote }}
+  CRDT_ENABLED: "true"
+  CRDT_REPLICATION_FACTOR: {{ .Values.crdt.replicationFactor | quote }}
+  CRDT_ANTI_ENTROPY_INTERVAL_SECONDS: {{ .Values.crdt.antiEntropyIntervalSeconds | quote }}
+  PERSISTENCE_ENABLED: {{ .Values.persistence.enabled | quote }}
+  ETCD_ENABLED: "true"
+  ETCD_ENDPOINTS: {{ .Values.etcd.endpoints | quote }}
+  TLS_ENABLED: {{ .Values.tls.enabled | quote }}
+  MTLS_REQUIRED: {{ .Values.tls.enabled | quote }}
+  TLS_MIN_VERSION: "TLSv1.3"
+  OBSERVABILITY_ENABLED: {{ .Values.observability.enabled | quote }}
+  OBSERVABILITY_HOST: "0.0.0.0"
+  OBSERVABILITY_PORT: {{ .Values.service.metricsPort | quote }}
+  METRICS_ENABLED: {{ .Values.observability.enabled | quote }}
+  TRACING_ENABLED: {{ .Values.observability.tracingEnabled | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.otlpEndpoint | quote }}
+  OTEL_SERVICE_NAME: "distsys-node"
