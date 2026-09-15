@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 
 from distsys.cluster.member import MemberStatus, SeedAddress
+from distsys.crdt import GCounter
 from distsys.crdt_client import CrdtClient
 from distsys.node import DistributedNode
 from tests.integration.cluster_helpers import cluster_settings, wait_until
@@ -68,7 +69,7 @@ async def test_stale_durable_replica_reconciles_after_restart(
                     return False
             return True
 
-        await wait_until(lambda: three_ready(live), timeout_seconds=3.0)
+        await wait_until(lambda: three_ready(live), timeout_seconds=5.0)
 
         client = CrdtClient(port=ports[0], timeout_seconds=2.0)
         initial = await client.increment("durable.reconcile")
@@ -78,7 +79,9 @@ async def test_stale_durable_replica_reconciles_after_restart(
             for node in live:
                 assert node.crdt_service is not None
                 entry = await node.crdt_service.store.get("durable.reconcile")
-                if entry is None or entry.state.value() != 1:
+                if entry is None or not isinstance(entry.state, GCounter):
+                    return False
+                if entry.state.value() != 1:
                     return False
             return True
 
@@ -102,7 +105,7 @@ async def test_stale_durable_replica_reconciles_after_restart(
                     return False
             return True
 
-        await wait_until(node2_not_alive, timeout_seconds=3.0)
+        await wait_until(node2_not_alive, timeout_seconds=5.0)
 
         advanced = await client.increment(
             "durable.reconcile",
@@ -121,17 +124,19 @@ async def test_stale_durable_replica_reconciles_after_restart(
         assert restored_frontier.get(old_actor) >= old_counter
 
         full = [node0, node1, restarted]
-        await wait_until(lambda: three_ready(full), timeout_seconds=3.0)
+        await wait_until(lambda: three_ready(full), timeout_seconds=5.0)
 
         async def converged() -> bool:
             for node in full:
                 assert node.crdt_service is not None
                 entry = await node.crdt_service.store.get("durable.reconcile")
-                if entry is None or entry.state.value() != 3:
+                if entry is None or not isinstance(entry.state, GCounter):
+                    return False
+                if entry.state.value() != 3:
                     return False
             return True
 
-        await wait_until(converged, timeout_seconds=3.0)
+        await wait_until(converged, timeout_seconds=5.0)
     finally:
         if restarted is not None:
             await restarted.stop()

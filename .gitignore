@@ -26,3 +26,8 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 .phase5-logs/
+
+# Phase 6 generated evidence/runtime
+benchmark-results/
+.phase6-logs/
+.phase6-runtime/

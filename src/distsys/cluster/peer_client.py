@@ -5,9 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import ssl
+import time
 import uuid
+from contextlib import nullcontext
+from dataclasses import replace
 from typing import Any
 
+from distsys.chaos.routing import peer_routing_enabled, resolve_peer_endpoint
 from distsys.cluster.codec import (
     AckData,
     decode_ack,
@@ -69,6 +73,8 @@ class PeerClient:
         self.circuit_breaker_recovery_seconds = circuit_breaker_recovery_seconds
         self.max_frame_size = max_frame_size
         self.ssl_context = ssl_context
+        self.metrics: Any | None = None
+        self.tracing: Any | None = None
         self._breakers: dict[str, CircuitBreaker] = {}
 
     def breaker_for(self, node_id: str) -> CircuitBreaker:
@@ -82,6 +88,80 @@ class PeerClient:
         return breaker
 
     async def _exchange_endpoint(
+        self,
+        host: str,
+        port: int,
+        message: Message,
+        *,
+        timeout_seconds: float,
+        expected_node_id: str | None = None,
+    ) -> Message:
+        tracing = getattr(self, "tracing", None)
+        metrics = getattr(self, "metrics", None)
+        if (
+            metrics is None
+            and (tracing is None or not tracing.enabled)
+            and not peer_routing_enabled()
+        ):
+            return await self._exchange_endpoint_raw(
+                host,
+                port,
+                message,
+                timeout_seconds=timeout_seconds,
+                expected_node_id=expected_node_id,
+            )
+
+        operation = {
+            MessageType.JOIN_REQUEST: "request",
+            MessageType.PING: "ping",
+            MessageType.PING_REQ: "ping",
+            MessageType.GOSSIP: "gossip",
+            MessageType.FORWARDED_REQUEST: "forward",
+        }.get(message.msg_type, "request")
+        host, port = resolve_peer_endpoint(expected_node_id, host, port)
+        span_context = (
+            tracing.tracer.start_as_current_span(
+                "distsys.peer_rpc",
+                attributes={
+                    "distsys.node.id": self.local_node_id,
+                    "distsys.peer.id": expected_node_id or "unknown",
+                    "distsys.operation": operation,
+                },
+            )
+            if tracing is not None and tracing.enabled
+            else nullcontext()
+        )
+        started = time.perf_counter()
+        status = "error"
+        with span_context:
+            if tracing is not None and tracing.enabled:
+                carrier: dict[str, str] = {}
+                tracing.inject(carrier)
+                message = replace(
+                    message,
+                    traceparent=carrier.get("traceparent", ""),
+                    tracestate=carrier.get("tracestate", ""),
+                )
+            try:
+                response = await self._exchange_endpoint_raw(
+                    host,
+                    port,
+                    message,
+                    timeout_seconds=timeout_seconds,
+                    expected_node_id=expected_node_id,
+                )
+                status = "success"
+                return response
+            except TimeoutError:
+                status = "timeout"
+                raise
+            finally:
+                if metrics is not None:
+                    metrics.peer_rpc(operation, status, time.perf_counter() - started)
+                    if operation == "gossip" and status != "success":
+                        metrics.gossip_failure()
+
+    async def _exchange_endpoint_raw(
         self,
         host: str,
         port: int,

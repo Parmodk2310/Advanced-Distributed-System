@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import ssl
+import time
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import replace
-from typing import Protocol
+from typing import Any, Protocol
 
+from distsys.chaos.routing import peer_routing_enabled, resolve_peer_endpoint
 from distsys.cluster.member import ClusterMember
 from distsys.protocol.framing import DEFAULT_MAX_FRAME_SIZE, encode_frame, read_message
 from distsys.protocol.message import Message, MessageType
@@ -85,8 +88,69 @@ class CrdtPeerClient:
         self.local_node_id = local_node_id
         self.max_frame_size = max_frame_size
         self.ssl_context = ssl_context
+        self.metrics: Any | None = None
+        self.tracing: Any | None = None
 
     async def _exchange(
+        self,
+        peer: ClusterMember,
+        message: Message,
+        *,
+        timeout_seconds: float,
+    ) -> Message:
+        tracing = getattr(self, "tracing", None)
+        metrics = getattr(self, "metrics", None)
+        if (
+            metrics is None
+            and (tracing is None or not tracing.enabled)
+            and not peer_routing_enabled()
+        ):
+            return await self._exchange_raw(peer, message, timeout_seconds=timeout_seconds)
+
+        operation = {
+            MessageType.CRDT_REPLICATE: "replicate",
+            MessageType.CRDT_FETCH: "fetch",
+            MessageType.CRDT_DIGEST: "digest",
+            MessageType.CRDT_READ_REQUEST: "read",
+            MessageType.CRDT_MUTATE_REQUEST: "write",
+        }.get(message.msg_type, "request")
+        host, port = resolve_peer_endpoint(peer.node_id, peer.host, peer.port)
+        peer = replace(peer, host=host, port=port)
+        span_context = (
+            tracing.tracer.start_as_current_span(
+                "distsys.peer_rpc",
+                attributes={
+                    "distsys.node.id": self.local_node_id,
+                    "distsys.peer.id": peer.node_id,
+                    "distsys.operation": operation,
+                },
+            )
+            if tracing is not None and tracing.enabled
+            else nullcontext()
+        )
+        started = time.perf_counter()
+        status = "error"
+        with span_context:
+            if tracing is not None and tracing.enabled:
+                carrier: dict[str, str] = {}
+                tracing.inject(carrier)
+                message = replace(
+                    message,
+                    traceparent=carrier.get("traceparent", ""),
+                    tracestate=carrier.get("tracestate", ""),
+                )
+            try:
+                response = await self._exchange_raw(peer, message, timeout_seconds=timeout_seconds)
+                status = "success"
+                return response
+            except TimeoutError:
+                status = "timeout"
+                raise
+            finally:
+                if metrics is not None:
+                    metrics.peer_rpc(operation, status, time.perf_counter() - started)
+
+    async def _exchange_raw(
         self,
         peer: ClusterMember,
         message: Message,

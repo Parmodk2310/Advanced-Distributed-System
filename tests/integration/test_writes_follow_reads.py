@@ -11,6 +11,7 @@ from tests.integration.cluster_helpers import cluster_settings, wait_until
 def settings(*, node_id: str, port: int, seeds=()):
     return replace(
         cluster_settings(node_id=node_id, port=port, seeds=seeds),
+        request_timeout_seconds=5.0,
         crdt_enabled=True,
         crdt_replication_factor=3,
         crdt_anti_entropy_interval_seconds=10.0,

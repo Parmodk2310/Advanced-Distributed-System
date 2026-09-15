@@ -37,6 +37,8 @@ class Message:
     timestamp_ms: int
     ttl: int
     payload: bytes
+    traceparent: str = ""
+    tracestate: str = ""
 
     @classmethod
     def new_request(
@@ -47,6 +49,8 @@ class Message:
         correlation_id: str | None = None,
         ttl: int = 8,
         msg_type: MessageType = MessageType.REQUEST,
+        traceparent: str = "",
+        tracestate: str = "",
     ) -> Message:
         return cls(
             msg_type=msg_type,
@@ -55,6 +59,8 @@ class Message:
             timestamp_ms=int(time.time() * 1000),
             ttl=ttl,
             payload=payload,
+            traceparent=traceparent,
+            tracestate=tracestate,
         )
 
     @classmethod
@@ -66,6 +72,8 @@ class Message:
         payload: bytes,
         msg_type: MessageType = MessageType.RESPONSE,
         ttl: int = 8,
+        traceparent: str = "",
+        tracestate: str = "",
     ) -> Message:
         return cls(
             msg_type=msg_type,
@@ -74,4 +82,6 @@ class Message:
             timestamp_ms=int(time.time() * 1000),
             ttl=ttl,
             payload=payload,
+            traceparent=traceparent,
+            tracestate=tracestate,
         )

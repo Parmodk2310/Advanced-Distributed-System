@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import signal
 
-from distsys.node import DistributedNode
+from distsys.observed_node import ObservedDistributedNode
 from distsys.utils.config import Settings
 from distsys.utils.logging import configure_logging
 
@@ -13,7 +13,7 @@ from distsys.utils.logging import configure_logging
 async def run() -> None:
     settings = Settings.from_env()
     configure_logging(settings.log_level)
-    node = DistributedNode(settings)
+    node = ObservedDistributedNode(settings)
     await node.start()
 
     stop_event = asyncio.Event()

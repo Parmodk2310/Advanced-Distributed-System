@@ -141,24 +141,82 @@ Exit: acknowledged CRDT mutations are locally durable before ACK; the same durab
 
 ## Phase 6 — Observability, Chaos & Performance
 
-Add:
+Status: **COMPLETE**
 
-- `src/distsys/observability/metrics.py`
-- `src/distsys/observability/health.py`
-- `src/distsys/observability/tracing.py`
-- `deploy/monitoring/prometheus.yml`
-- `deploy/monitoring/grafana/provisioning/*`
-- `deploy/monitoring/grafana/dashboards/distributed-system.json`
+Verified implementation checkpoint:
+
+```text
+296fdd8
+```
+
+Implemented/owned:
+
+- `src/distsys/observability/*`
+- `src/distsys/benchmarking/*`
+- `src/distsys/chaos/*`
+- independent `/metrics`, `/health/live`, and `/health/ready`
+- bounded-cardinality Prometheus instrumentation
+- OpenTelemetry/W3C trace propagation
+- OTLP Collector → Tempo trace path
+- provisioned Prometheus/Grafana monitoring
+- Dockerized three-node Phase 6 runtime
+- direct healthy-baseline peer routing
+- opt-in Toxiproxy peer/etcd routing for chaos
+- staged infrastructure/proxy/node/monitoring startup
+- managed chaos manifest and safety policy
+- network-delay scenario
+- peer-partition scenario
+- etcd-outage scenario
+- Docker container node-kill/recovery scenario
+- task and CRDT benchmark workloads
+- reproducible JSON benchmark artifacts with environment metadata
+- direct/proxy release-gate lifecycle
+- `deploy/monitoring/Dockerfile.node`
+- `deploy/monitoring/docker-compose.yml`
+- `deploy/monitoring/prometheus/*`
+- `deploy/monitoring/grafana/*`
+- `deploy/monitoring/tempo/*`
+- `deploy/monitoring/otel/*`
 - `scripts/benchmark.py`
 - `scripts/chaos.py`
-- `tests/chaos/test_node_kill.py`
-- `tests/chaos/test_network_delay.py`
-- `tests/chaos/test_partition.py`
-- `tests/chaos/test_etcd_outage.py`
-- `tests/performance/test_latency_budget.py`
-- `docs/benchmark-methodology.md`
+- `scripts/phase6_observability_smoke.py`
+- `scripts/phase6_monitoring_smoke.py`
+- `scripts/phase6_proxy_bootstrap.py`
+- `scripts/run_phase6_cluster.sh`
+- `scripts/phase6_release_gate.sh`
+- Phase 6 unit/integration/contract coverage
+- `docs/PHASE6_ARCHITECTURE.md`
+- `docs/PHASE6_VERIFICATION.md`
 
-Exit: dashboards explain normal/overload/failure behavior and benchmark results are reproducible with environment metadata.
+Final verification:
+
+```text
+373 passed, 8 skipped
+Ruff          PASS
+Black         PASS
+mypy          PASS
+compileall    PASS
+
+Prometheus    3/3 targets healthy
+Grafana       provisioned
+Tempo         trace round-trip PASS
+
+task quick    valid=true, success_ratio=1.0
+CRDT quick    valid=true, success_ratio=1.0
+
+network-delay PASS, cleanup_ok=true
+partition     PASS, cleanup_ok=true
+etcd-outage   PASS, cleanup_ok=true
+node-kill     PASS, cleanup_ok=true
+
+Phase 6 release gate passed
+```
+
+Exit: the secure/durable Phase 5 cluster is now observable, benchmarkable, and fault-tested through a reproducible release gate. Healthy benchmark traffic bypasses chaos proxies; chaos traffic explicitly opts into managed Toxiproxy paths. Monitoring and tracing stay outside the correctness-critical data path. All tested faults recover and clean up successfully.
+
+Phase 6 does not claim consensus, linearizability, quorum durability, exactly-once execution, distributed transactions, arbitrary fault tolerance, or production Kubernetes readiness.
+
+---
 
 ## Phase 7 — Production Delivery & Portfolio
 

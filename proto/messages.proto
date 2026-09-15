@@ -37,7 +37,15 @@ enum CrdtType {
   MVREGISTER = 4;
 }
 
-message Envelope { string sender_id = 1; string correlation_id = 2; uint64 timestamp_ms = 3; uint32 ttl = 4; bytes payload = 5; }
+message Envelope {
+  string sender_id = 1;
+  string correlation_id = 2;
+  uint64 timestamp_ms = 3;
+  uint32 ttl = 4;
+  bytes payload = 5;
+  string traceparent = 6;
+  string tracestate = 7;
+}
 message TaskRequest { string task_name = 1; bytes payload_json = 2; string routing_key = 3; }
 message Error { ErrorCode code = 1; string message = 2; }
 message TaskResponse { bool success = 1; bytes result_json = 2; Error error = 3; uint64 processing_time_us = 4; }

@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+scrape_configs:
+  - job_name: distsys-phase6
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - node-0:9100
+          - node-1:9101
+          - node-2:9102

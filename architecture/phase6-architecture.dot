@@ -1,0 +1,31 @@
+digraph phase6 {
+  rankdir=LR;
+  graph [label="Phase 6 — Observability, Chaos and Performance", labelloc=t, fontsize=22, fontname="DejaVu Sans", pad=0.3, nodesep=0.45, ranksep=0.7];
+  node [shape=box, style="rounded", fontname="DejaVu Sans", fontsize=11, margin="0.12,0.08"];
+  edge [fontname="DejaVu Sans", fontsize=9];
+
+  client [label="Smoke / Benchmark Client"];
+  proxy [label="Toxiproxy\npeer + etcd paths"];
+  n0 [label="node-0\nTLS app :18000\nobs :9100"];
+  n1 [label="node-1\nTLS app :18001\nobs :9101"];
+  n2 [label="node-2\nTLS app :18002\nobs :9102"];
+  collector [label="OpenTelemetry Collector\nOTLP HTTP :4318"];
+  tempo [label="Tempo 3.0.2\ntraces :3200"];
+  prom [label="Prometheus 3.13.3 LTS\nmetrics :9090"];
+  graf [label="Grafana 13.2.1\ndashboards :3000"];
+  chaos [label="Guarded Chaos Controller\nopt-in + manifest + cleanup"];
+  etcd [label="etcd v3.6.14\ncoordination"];
+  storage [label="Per-node SQLite\ndurable CRDT state"];
+
+  client -> proxy [label="mTLS requests"];
+  proxy -> n0; proxy -> n1; proxy -> n2;
+  n0 -> collector [label="OTLP spans"]; n1 -> collector; n2 -> collector;
+  collector -> tempo [label="OTLP/gRPC"];
+  n0 -> prom [label="/metrics"]; n1 -> prom; n2 -> prom;
+  prom -> graf; tempo -> graf;
+  chaos -> proxy [label="delay / partition"];
+  chaos -> n1 [label="managed SIGKILL"];
+  chaos -> etcd [label="scoped outage"];
+  proxy -> etcd [label="proxy :12379"];
+  n0 -> storage; n1 -> storage; n2 -> storage;
+}

@@ -8,6 +8,7 @@ import ssl
 import time
 from typing import Any
 
+from distsys import __version__
 from distsys.cluster.cluster_router import (
     LocalOverloadedError,
     PeerUnavailableError,
@@ -199,6 +200,11 @@ class DistributedNode:
 
                     async def on_coordination_health(health) -> None:
                         await self.health.set_coordination(health.healthy, health.message)
+                        metrics = getattr(self, "metrics", None)
+                        if metrics is not None:
+                            metrics.set_coordination(health.healthy)
+                            if not health.healthy:
+                                metrics.coordination_failure("lease")
 
                     lease = LeaseManager(
                         etcd_client,
@@ -215,7 +221,7 @@ class DistributedNode:
                         port=self.bound_port,
                         membership_incarnation=membership_incarnation,
                         protocol_version=5,
-                        release="0.5.0",
+                        release=__version__,
                         tls_required=self.settings.tls_enabled,
                     )
                     bootstrap_seeds = await self.coordination_service.bootstrap(coordination_member)
@@ -244,6 +250,8 @@ class DistributedNode:
                     max_frame_size=self.settings.max_frame_size,
                     ssl_context=self._client_ssl_context,
                 )
+                cluster_peer.metrics = getattr(self, "metrics", None)
+                cluster_peer.tracing = getattr(self, "tracing", None)
                 self.cluster_service = ClusterService(
                     settings=self.settings,
                     bound_port=self.bound_port,
@@ -261,12 +269,15 @@ class DistributedNode:
                         max_frame_size=self.settings.max_frame_size,
                         ssl_context=self._client_ssl_context,
                     )
+                    crdt_peer.metrics = getattr(self, "metrics", None)
+                    crdt_peer.tracing = getattr(self, "tracing", None)
                     if restored is not None and self.repository is not None:
                         durable_store = DurableCrdtStore(
                             restored.memory_store,
                             self.repository,
                             restored.clock,
                         )
+                        durable_store.metrics = getattr(self, "metrics", None)
                         self.crdt_service = CrdtService(
                             settings=self.settings,
                             cluster_service=self.cluster_service,
