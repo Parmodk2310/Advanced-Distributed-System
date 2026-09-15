@@ -14,14 +14,20 @@ print_failure_diagnostics() {
     return
   fi
   printf '%s\n' '--- Phase 7 failure diagnostics: resources ---' >&2
-  timeout 20s kubectl -n "$PHASE7_NAMESPACE" get pods,pvc,svc,statefulset,events \
-    --sort-by=.metadata.creationTimestamp >&2 || true
+  timeout 20s kubectl -n "$PHASE7_NAMESPACE" get pods,pvc,svc,statefulset,events >&2 || true
   printf '%s\n' '--- Phase 7 failure diagnostics: pod descriptions ---' >&2
   timeout 20s kubectl -n "$PHASE7_NAMESPACE" describe pods >&2 || true
   printf '%s\n' '--- Phase 7 failure diagnostics: node logs ---' >&2
-  timeout 20s kubectl -n "$PHASE7_NAMESPACE" logs \
-    "statefulset/$PHASE7_RELEASE-distributed-system" \
-    --all-containers --prefix --tail=100 >&2 || true
+  while IFS= read -r pod; do
+    timeout 10s kubectl -n "$PHASE7_NAMESPACE" logs "$pod" \
+      --all-containers --prefix --tail=100 >&2 || true
+    timeout 10s kubectl -n "$PHASE7_NAMESPACE" logs "$pod" \
+      --container node --previous --prefix --tail=100 >&2 || true
+  done < <(
+    kubectl -n "$PHASE7_NAMESPACE" get pods \
+      --selector app.kubernetes.io/instance="$PHASE7_RELEASE",app.kubernetes.io/name=distributed-system \
+      --output name 2>/dev/null || true
+  )
 }
 
 cleanup_on_exit() {

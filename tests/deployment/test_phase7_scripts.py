@@ -46,6 +46,7 @@ def test_cluster_creation_is_failure_safe() -> None:
     assert "print_failure_diagnostics" in kind
     assert "timeout 20s kubectl" in kind
     assert "--all-containers --prefix --tail=100" in kind
+    assert "--container node --previous --prefix --tail=100" in kind
     assert "PHASE7_HELM_TIMEOUT" in kind
     assert "cleanup_required=0" in kind
     assert "PHASE7_SKIP_BUILD:-0" in kind
