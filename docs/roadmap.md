@@ -176,7 +176,7 @@ Implemented/owned:
 - `deploy/monitoring/prometheus/*`
 - `deploy/monitoring/grafana/*`
 - `deploy/monitoring/tempo/*`
-- `deploy/monitoring/otel/*`
+- `deploy/monitoring/otel-collector/*`
 - `scripts/benchmark.py`
 - `scripts/chaos.py`
 - `scripts/phase6_observability_smoke.py`
@@ -185,8 +185,8 @@ Implemented/owned:
 - `scripts/run_phase6_cluster.sh`
 - `scripts/phase6_release_gate.sh`
 - Phase 6 unit/integration/contract coverage
-- `docs/PHASE6_ARCHITECTURE.md`
-- `docs/PHASE6_VERIFICATION.md`
+- `docs/architecture/phase6-observability-chaos-performance.md`
+- `docs/verification/phase6.md`
 
 Final verification:
 
@@ -225,7 +225,7 @@ Add:
 - `Dockerfile`
 - `compose.yaml`
 - `compose.monitoring.yaml`
-- `.github/workflows/ci.yml`
+- extend `.github/workflows/ci.yml` with container and deployment gates
 - `.github/workflows/release.yml`
 - `deploy/terraform/aws/*` or `deploy/terraform/gcp/*`
 - optional `deploy/kubernetes/base/*`

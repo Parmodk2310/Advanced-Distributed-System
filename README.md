@@ -59,7 +59,7 @@ The Phase 6 release gate completed successfully on 2026-09-15.
 | Container node-kill chaos | **PASS + recovery** |
 | Final Phase 6 release gate | **PASS** |
 
-See [`docs/PHASE6_VERIFICATION.md`](docs/PHASE6_VERIFICATION.md) for the complete evidence record.
+See [`docs/verification/phase6.md`](docs/verification/phase6.md) for the complete evidence record.
 
 ---
 
@@ -140,7 +140,7 @@ client
 
 Healthy benchmarks therefore do not pay chaos-proxy overhead. Fault experiments explicitly opt into proxy routing.
 
-Detailed design: [`docs/PHASE6_ARCHITECTURE.md`](docs/PHASE6_ARCHITECTURE.md).
+Detailed design: [`docs/architecture/phase6-observability-chaos-performance.md`](docs/architecture/phase6-observability-chaos-performance.md).
 
 ---
 
