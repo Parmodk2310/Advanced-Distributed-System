@@ -4,8 +4,8 @@
 
 A seven-phase distributed-systems engineering project that evolves from a bounded asynchronous execution engine into a secure, durable, observable, fault-tested multi-node platform.
 
-**Current implementation:** Phase 6 · `v0.6.0`  
-**Verified implementation checkpoint:** `296fdd8`  
+**Current implementation:** Phase 6 · `v0.6.0`
+**Verified implementation checkpoint:** `296fdd8`
 **Next:** Phase 7 — production delivery, Kubernetes/cloud deployment, CI/release engineering, and portfolio hardening.
 
 ---
