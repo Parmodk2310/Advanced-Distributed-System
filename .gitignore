@@ -31,3 +31,10 @@ data/*.db-shm
 benchmark-results/
 .phase6-logs/
 .phase6-runtime/
+
+# Phase 7 ephemeral clusters, certificates, plans, and evidence
+.phase7/
+*.tfstate
+*.tfstate.*
+*.tfplan
+kubeconfig*

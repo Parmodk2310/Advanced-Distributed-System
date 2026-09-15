@@ -25,6 +25,7 @@ tls:
   enabled: true
   mtlsRequired: true
   secretName: distsys-node-tls
+  sourceMountPath: /var/run/distsys/tls-source
   mountPath: /var/run/distsys/tls
 
 observability:

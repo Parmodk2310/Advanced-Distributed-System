@@ -24,11 +24,12 @@
     },
     "tls": {
       "type": "object",
-      "required": ["enabled", "mtlsRequired", "secretName", "mountPath"],
+      "required": ["enabled", "mtlsRequired", "secretName", "sourceMountPath", "mountPath"],
       "properties": {
         "enabled": {"type": "boolean"},
         "mtlsRequired": {"type": "boolean"},
         "secretName": {"type": "string", "minLength": 1},
+        "sourceMountPath": {"type": "string", "pattern": "^/"},
         "mountPath": {"type": "string", "pattern": "^/"}
       }
     },

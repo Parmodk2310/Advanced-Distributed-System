@@ -31,6 +31,33 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: select-node-identity
+          image: {{ include "distributed-system.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - >-
+              cp {{ .Values.tls.sourceMountPath }}/ca.crt {{ .Values.tls.mountPath }}/ca.crt;
+              cp {{ .Values.tls.sourceMountPath }}/${NODE_ID}.crt {{ .Values.tls.mountPath }}/tls.crt;
+              cp {{ .Values.tls.sourceMountPath }}/${NODE_ID}.key {{ .Values.tls.mountPath }}/tls.key;
+              chmod 0400 {{ .Values.tls.mountPath }}/tls.key;
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tls-source
+              mountPath: {{ .Values.tls.sourceMountPath }}
+              readOnly: true
+            - name: tls-runtime
+              mountPath: {{ .Values.tls.mountPath }}
       containers:
         - name: node
           image: {{ include "distributed-system.image" . | quote }}
@@ -91,17 +118,21 @@ spec:
               mountPath: /data
             - name: tmp
               mountPath: /tmp
-            - name: tls
+            - name: tls-runtime
               mountPath: {{ .Values.tls.mountPath }}
               readOnly: true
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 128Mi
-        - name: tls
+        - name: tls-source
           secret:
             secretName: {{ .Values.tls.secretName }}
             defaultMode: 0400
+        - name: tls-runtime
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
   volumeClaimTemplates:
     - metadata:
         name: data

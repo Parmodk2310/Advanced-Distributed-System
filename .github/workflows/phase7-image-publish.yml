@@ -14,6 +14,10 @@ on:
       - tests/deployment/test_container_contract.py
       - tests/deployment/test_helm_contract.py
       - deploy/helm/**
+      - deploy/kind/**
+      - deploy/k3d/**
+      - scripts/phase7/**
+      - tests/deployment/test_phase7_scripts.py
       - .github/workflows/phase7-image-publish.yml
 
 concurrency:
@@ -54,6 +58,17 @@ jobs:
         with:
           version: v3.17.3
 
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.32.2
+
+      - name: Set up kind
+        uses: helm/kind-action@v1
+        with:
+          install_only: true
+          version: v0.26.0
+
       - name: Validate Helm release contract
         run: |
           helm lint deploy/helm/distributed-system \
@@ -90,3 +105,17 @@ jobs:
           test "$(docker image inspect "$IMAGE" --format '{{.Config.User}}')" = "10001:10001"
           test "$(docker image inspect "$IMAGE" --format '{{json .Config.Entrypoint}}')" = '["python","-m","distsys.main"]'
           docker run --rm --entrypoint python "$IMAGE" -c 'import distsys; print("import-ok")'
+
+      - name: Verify kind lifecycle and mTLS bootstrap
+        env:
+          PHASE7_SKIP_BUILD: "1"
+          PHASE7_IMAGE: distsys-node:phase7-${{ github.sha }}
+        run: |
+          bash scripts/phase7/cluster_up.sh
+          kubectl -n distsys get pods,pvc,svc
+          kubectl -n distsys get statefulset phase7-distributed-system \
+            -o jsonpath='{.status.readyReplicas}' | grep -qx '3'
+
+      - name: Always clean local cluster and credentials
+        if: always()
+        run: bash scripts/phase7/cluster_down.sh

@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etcd
+  namespace: distsys
+  labels:
+    app.kubernetes.io/name: etcd
+    app.kubernetes.io/part-of: advanced-distributed-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: etcd
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: etcd
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: etcd
+          image: quay.io/coreos/etcd:v3.5.15@sha256:0934690612905554eb61ddefb9faaaecb47c2f6931dbb453e694358092ee8990
+          command: ["/usr/local/bin/etcd"]
+          args:
+            - --name=phase7-local
+            - --data-dir=/var/lib/etcd
+            - --listen-client-urls=http://0.0.0.0:2379
+            - --advertise-client-urls=http://etcd:2379
+          ports:
+            - name: client
+              containerPort: 2379
+          readinessProbe:
+            exec:
+              command: ["/usr/local/bin/etcdctl", "endpoint", "health"]
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/etcd
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  namespace: distsys
+  labels:
+    app.kubernetes.io/name: etcd
+spec:
+  selector:
+    app.kubernetes.io/name: etcd
+  ports:
+    - name: client
+      port: 2379
+      targetPort: client

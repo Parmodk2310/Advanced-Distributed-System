@@ -98,7 +98,7 @@ phase5-secure-smoke:
 .PHONY: phase6-monitoring-up phase6-monitoring-down phase6-cluster \
 	phase6-observability-smoke phase6-chaos phase6-benchmark phase6-release-gate
 
-.PHONY: phase7-image phase7-image-inspect
+.PHONY: phase7-image phase7-image-inspect phase7-local-up phase7-local-down phase7-k3d-verify
 
 PHASE7_IMAGE ?= distsys-node:phase7-local
 
@@ -108,6 +108,15 @@ phase7-image:
 phase7-image-inspect:
 	docker inspect $(PHASE7_IMAGE) --format '{{.Config.User}} {{json .Config.Entrypoint}}'
 	docker run --rm --entrypoint python $(PHASE7_IMAGE) -c 'import distsys; print("import-ok")'
+
+phase7-local-up:
+	bash scripts/phase7/cluster_up.sh
+
+phase7-local-down:
+	bash scripts/phase7/cluster_down.sh
+
+phase7-k3d-verify:
+	bash scripts/phase7/k3d_verify.sh
 
 phase6-monitoring-up:
 	docker compose -p distsys-phase6 -f deploy/monitoring/docker-compose.yml up -d
