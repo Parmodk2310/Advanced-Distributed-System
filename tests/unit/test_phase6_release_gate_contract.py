@@ -54,3 +54,10 @@ def test_node_launcher_supports_direct_and_proxy_peer_routing() -> None:
     assert "unsupported PHASE6_PEER_ROUTING" in script
 
     assert "export RUN_CHAOS_TESTS=1 " "PHASE6_PEER_PROXY_MAP=" not in script
+
+
+def test_phase6_observability_is_container_reachable_but_app_stays_loopback() -> None:
+    script = Path("scripts/phase6_start_node.sh").read_text(encoding="utf-8")
+
+    assert "NODE_HOST=127.0.0.1" in script
+    assert 'OBSERVABILITY_HOST="${PHASE6_OBSERVABILITY_HOST:-0.0.0.0}"' in script
