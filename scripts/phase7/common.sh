@@ -9,6 +9,7 @@ readonly PHASE7_RELEASE="${PHASE7_RELEASE:-phase7}"
 readonly PHASE7_KIND_CLUSTER="${PHASE7_KIND_CLUSTER:-distsys-phase7}"
 readonly PHASE7_K3D_CLUSTER="${PHASE7_K3D_CLUSTER:-distsys-phase7-k3d}"
 readonly PHASE7_IMAGE="${PHASE7_IMAGE:-distsys-node:phase7-local}"
+readonly PHASE7_HELM_TIMEOUT="${PHASE7_HELM_TIMEOUT:-5m}"
 
 phase7_require_command() {
   local command_name="$1"

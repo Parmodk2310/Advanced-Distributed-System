@@ -14,12 +14,12 @@ print_failure_diagnostics() {
     return
   fi
   printf '%s\n' '--- Phase 7 failure diagnostics: resources ---' >&2
-  kubectl -n "$PHASE7_NAMESPACE" get pods,pvc,svc,statefulset,events \
+  timeout 20s kubectl -n "$PHASE7_NAMESPACE" get pods,pvc,svc,statefulset,events \
     --sort-by=.metadata.creationTimestamp >&2 || true
   printf '%s\n' '--- Phase 7 failure diagnostics: pod descriptions ---' >&2
-  kubectl -n "$PHASE7_NAMESPACE" describe pods >&2 || true
+  timeout 20s kubectl -n "$PHASE7_NAMESPACE" describe pods >&2 || true
   printf '%s\n' '--- Phase 7 failure diagnostics: node logs ---' >&2
-  kubectl -n "$PHASE7_NAMESPACE" logs \
+  timeout 20s kubectl -n "$PHASE7_NAMESPACE" logs \
     "statefulset/$PHASE7_RELEASE-distributed-system" \
     --all-containers --prefix --tail=100 >&2 || true
 }
@@ -48,7 +48,7 @@ helm upgrade --install "$PHASE7_RELEASE" "$(phase7_chart_dir)" \
   --values "$(phase7_chart_dir)/values-kind.yaml" \
   --set image.repository="${PHASE7_IMAGE%%:*}" \
   --set image.tag="${PHASE7_IMAGE##*:}" \
-  --wait --timeout 5m
+  --wait --timeout "$PHASE7_HELM_TIMEOUT"
 
 kubectl -n "$PHASE7_NAMESPACE" rollout status \
   "statefulset/$PHASE7_RELEASE-distributed-system" --timeout=180s

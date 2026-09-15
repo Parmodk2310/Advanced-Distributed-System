@@ -110,6 +110,7 @@ jobs:
         env:
           PHASE7_SKIP_BUILD: "1"
           PHASE7_IMAGE: distsys-node:phase7-${{ github.sha }}
+          PHASE7_HELM_TIMEOUT: 90s
         run: |
           bash scripts/phase7/cluster_up.sh
           kubectl -n distsys get pods,pvc,svc
