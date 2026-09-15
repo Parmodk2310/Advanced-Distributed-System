@@ -81,8 +81,9 @@ async def test_stale_durable_replica_reconciles_after_restart(
                 entry = await node.crdt_service.store.get("durable.reconcile")
                 if entry is None or not isinstance(entry.state, GCounter):
                     return False
-                if entry.state.value() != 3:
+                if entry.state.value() != 1:
                     return False
+            return True
 
         await wait_until(all_have_one, timeout_seconds=2.0)
 
@@ -129,7 +130,9 @@ async def test_stale_durable_replica_reconciles_after_restart(
             for node in full:
                 assert node.crdt_service is not None
                 entry = await node.crdt_service.store.get("durable.reconcile")
-                if entry is None or entry.state.value() != 3:
+                if entry is None or not isinstance(entry.state, GCounter):
+                    return False
+                if entry.state.value() != 3:
                     return False
             return True
 
