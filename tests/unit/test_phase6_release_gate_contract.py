@@ -4,7 +4,7 @@ from pathlib import Path
 def test_release_gate_waits_for_circuit_breaker_recovery_before_benchmarks() -> None:
     script = Path("scripts/phase6_release_gate.sh").read_text(encoding="utf-8")
 
-    chaos_end = script.index('done\n', script.index("for scenario in"))
+    chaos_end = script.index("done\n", script.index("for scenario in"))
     recovery_wait = script.index('sleep "$BREAKER_RECOVERY_WAIT_SECONDS"', chaos_end)
     task_benchmark = script.index("--workload task", recovery_wait)
     expected_wait_setting = (
