@@ -1,0 +1,17 @@
+image:
+  repository: distsys-node
+  tag: phase7-local
+  pullPolicy: IfNotPresent
+  releaseMode: false
+
+persistence:
+  storageClass: standard
+  size: 512Mi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
