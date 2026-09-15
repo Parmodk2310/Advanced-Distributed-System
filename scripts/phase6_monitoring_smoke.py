@@ -34,8 +34,7 @@ def healthy_prometheus_targets(payload):
     return [
         target
         for target in active
-        if target.get("health") == "up"
-        and target.get("labels", {}).get("job") == "distsys-phase6"
+        if target.get("health") == "up" and target.get("labels", {}).get("job") == "distsys-phase6"
     ]
 
 
