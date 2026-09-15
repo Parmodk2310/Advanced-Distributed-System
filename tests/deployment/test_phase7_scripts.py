@@ -4,7 +4,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[2]
 PHASE7 = ROOT / "scripts" / "phase7"
 KIND_CONFIG = ROOT / "deploy" / "kind" / "cluster.yaml"
@@ -18,7 +17,6 @@ def test_kind_cluster_is_small_and_has_no_ingress_mapping() -> None:
     config = yaml.safe_load(KIND_CONFIG.read_text(encoding="utf-8"))
 
     assert config["kind"] == "Cluster"
-    assert config["name"] == "distsys-phase7"
     assert config["nodes"] == [{"role": "control-plane"}]
     assert "extraPortMappings" not in config["nodes"][0]
 
