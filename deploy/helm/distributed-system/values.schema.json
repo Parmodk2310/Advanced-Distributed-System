@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "replicaCount",
+    "image",
+    "crdt",
+    "service",
+    "resources"
+  ],
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 3
+    },
+    "image": {
+      "type": "object",
+      "required": [
+        "repository",
+        "releaseMode"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^$|^sha256:[0-9a-f]{64}$"
+        },
+        "pullPolicy": {
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        },
+        "releaseMode": {
+          "type": "boolean"
+        }
+      }
+    },
+    "crdt": {
+      "type": "object",
+      "required": [
+        "replicationFactor"
+      ],
+      "properties": {
+        "replicationFactor": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "ClusterIP"
+        },
+        "protocolPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "metricsPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "required": [
+        "requests",
+        "limits"
+      ]
+    }
+  }
+}
