@@ -41,14 +41,18 @@ async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_fac
 
         await wait_until(not_alive, timeout_seconds=5.0)
 
-        assert all(member.node_id != "node-1" for member in service.ring.candidates("any-key"))
+        assert all(
+            member.node_id != "node-1"
+            for member in service.ring.candidates("any-key")
+        )
+
+        await stop_task
 
         async def dead_or_removed() -> bool:
             current = await service.membership.get("node-1")
             return current is None or current.status is MemberStatus.DEAD
 
         await wait_until(dead_or_removed, timeout_seconds=5.0)
-        await stop_task
     finally:
         if stop_task is not None:
             await asyncio.gather(stop_task, return_exceptions=True)
