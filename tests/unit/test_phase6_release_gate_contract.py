@@ -1,15 +1,14 @@
 from pathlib import Path
 
 
-def test_release_gate_waits_for_circuit_breaker_recovery_before_benchmarks() -> None:
+def test_release_gate_benchmarks_clean_cluster_before_chaos() -> None:
     script = Path("scripts/phase6_release_gate.sh").read_text(encoding="utf-8")
 
-    chaos_end = script.index("done\n", script.index("for scenario in"))
-    recovery_wait = script.index('sleep "$BREAKER_RECOVERY_WAIT_SECONDS"', chaos_end)
-    task_benchmark = script.index("--workload task", recovery_wait)
-    expected_wait_setting = (
-        'BREAKER_RECOVERY_WAIT_SECONDS="${PHASE6_BREAKER_RECOVERY_WAIT_SECONDS:-11}"'
-    )
+    observability = script.index("phase6_observability_smoke.py")
+    monitoring = script.index("phase6_monitoring_smoke.py")
+    task_benchmark = script.index("--workload task")
+    crdt_benchmark = script.index("--workload crdt")
+    chaos = script.index("for scenario in")
 
-    assert expected_wait_setting in script
-    assert chaos_end < recovery_wait < task_benchmark
+    assert observability < monitoring < task_benchmark < crdt_benchmark < chaos
+    assert "BREAKER_RECOVERY_WAIT_SECONDS" not in script
