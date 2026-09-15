@@ -4,10 +4,16 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 COMPOSE=(docker compose -p distsys-phase6 -f deploy/monitoring/docker-compose.yml)
 LOG_DIR="${PHASE6_LOG_DIR:-$ROOT/.phase6-logs}"
+RUNNER_IDLE_PID=""
 mkdir -p "$LOG_DIR"
 
 cleanup() {
   trap - EXIT
+  if [[ -n "$RUNNER_IDLE_PID" ]] && kill -0 "$RUNNER_IDLE_PID" 2>/dev/null; then
+    kill -TERM "$RUNNER_IDLE_PID" 2>/dev/null || true
+    wait "$RUNNER_IDLE_PID" 2>/dev/null || true
+    RUNNER_IDLE_PID=""
+  fi
   if [[ -f "$LOG_DIR/manifest.json" ]]; then
     python - "$LOG_DIR/manifest.json" <<'PY'
 import json,os,signal,sys,time
@@ -55,4 +61,9 @@ sleep .8
 bash scripts/phase6_start_node.sh node-2 18002 9102
 
 echo "Phase 6 cluster running; manifest: $LOG_DIR/manifest.json"
-while true; do sleep 3600; done
+while true; do
+  sleep 3600 &
+  RUNNER_IDLE_PID=$!
+  wait "$RUNNER_IDLE_PID"
+  RUNNER_IDLE_PID=""
+done
