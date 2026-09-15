@@ -17,7 +17,7 @@ on:
       - deploy/kind/**
       - deploy/k3d/**
       - scripts/phase7/**
-      - tests/deployment/test_phase7_scripts.py
+      - tests/deployment/test_phase7_*.py
       - .github/workflows/phase7-image-publish.yml
 
 concurrency:
@@ -45,7 +45,9 @@ jobs:
           cache-dependency-path: requirements-dev.txt
 
       - name: Install contract-test dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -e .
 
       - name: Verify container contract
         run: |
@@ -116,6 +118,9 @@ jobs:
           kubectl -n distsys get pods,pvc,svc
           kubectl -n distsys get statefulset phase7-distributed-system \
             -o jsonpath='{.status.readyReplicas}' | grep -qx '3'
+          python scripts/phase7/verify_cluster.py --output .phase7/evidence/cluster.json
+          python scripts/phase7/verify_persistence.py --output .phase7/evidence/persistence.json
+          bash scripts/phase7/verify_rollback.sh
 
       - name: Always clean local cluster and credentials
         if: always()

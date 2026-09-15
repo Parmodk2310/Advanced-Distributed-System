@@ -1,0 +1,7 @@
+aws_region          = "ap-south-1"
+owner               = "replace-with-owner"
+expires_at          = "2026-09-16T23:59:59Z"
+budget_email        = "replace@example.com"
+monthly_budget_usd  = 15
+enable_eks          = false
+kubernetes_api_cidrs = ["192.0.2.1/32"]

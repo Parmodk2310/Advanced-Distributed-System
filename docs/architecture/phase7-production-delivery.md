@@ -1,8 +1,8 @@
 # Phase 7 — Production Delivery and Cloud Deployment
 
-**Status: PLANNED — NOT IMPLEMENTED**
+**Status: LOCAL KUBERNETES IMPLEMENTED — AWS EKS DEMONSTRATION PENDING**
 
-Phase 7 will promote one immutable artifact from local Kubernetes validation into Terraform-provisioned AWS EKS.
+Phase 7A packages the existing runtime as one hardened image and verifies a three-node Helm release on local Kubernetes. Phase 7B will promote the approved digest into Terraform-provisioned AWS EKS only after separate plan and cost approval.
 
 ![Planned Phase 7 architecture](assets/phase7-architecture.svg)
 
@@ -10,7 +10,7 @@ Phase 7 will promote one immutable artifact from local Kubernetes validation int
 
 ```mermaid
 flowchart TB
-  S["PLANNED — NOT IMPLEMENTED"]
+  S["LOCAL IMPLEMENTED · AWS PENDING"]
   C["Source commit"] --> G["Quality + security gates"] --> I["Immutable container image"]
   I --> L["Local kind/k3d validation"] --> H["Helm release contract"]
   H --> R["Registry digest promotion"] --> T["Terraform-provisioned AWS EKS"]
@@ -18,12 +18,14 @@ flowchart TB
   S -.-> I
 ```
 
-## Planned boundaries
+## Delivery boundaries
 
-- CI will build and identify an immutable image by digest.
-- kind or k3d will validate the same Helm contract used by EKS.
+- CI builds and identifies an immutable image by digest.
+- kind validates the same Helm contract intended for EKS; k3d is optional parity.
 - Terraform will provision AWS infrastructure; Helm will own Kubernetes release configuration.
 - Secrets will enter through an external secrets integration rather than Git.
 - Rollout verification and rollback will be explicit release gates.
 
-No Phase 7 deployment, production-readiness or cloud-availability claim is made. The target must preserve every Phase 1–6 correctness and release-gate boundary.
+Local delivery does not claim production readiness or cloud availability. AWS resource creation remains disabled by default and requires separate approval. The target preserves every Phase 1–6 correctness and release-gate boundary.
+
+See the [local runbook](../runbooks/phase7-local-kubernetes.md), [AWS demonstration runbook](../runbooks/phase7-aws-demonstration.md), and [verification record](../verification/phase7.md).

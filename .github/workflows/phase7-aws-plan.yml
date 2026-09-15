@@ -1,0 +1,24 @@
+name: Phase 7 AWS Plan
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency: {group: phase7-aws-plan, cancel-in-progress: false}
+jobs:
+  plan:
+    if: vars.AWS_PHASE7_ENABLED == 'true'
+    environment: phase7-aws-demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: {role-to-assume: "${{ vars.AWS_ROLE_ARN }}", aws-region: ap-south-1}
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.9.8}
+      - run: terraform -chdir=deploy/terraform/aws init -input=false
+      - run: terraform -chdir=deploy/terraform/aws plan -input=false -out=phase7.tfplan -var=enable_eks=true
+      - run: terraform -chdir=deploy/terraform/aws show -no-color phase7.tfplan > phase7-plan.txt && sha256sum deploy/terraform/aws/phase7.tfplan > phase7-plan.sha256
+      - uses: actions/upload-artifact@v4
+        with: {name: phase7-reviewed-plan-${{ github.sha }}, path: "deploy/terraform/aws/phase7.tfplan\nphase7-plan.txt\nphase7-plan.sha256", retention-days: 3}

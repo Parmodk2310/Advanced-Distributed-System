@@ -6,9 +6,9 @@
 
 A seven-phase distributed-systems engineering project that evolves from a bounded asynchronous execution engine into a secure, durable, observable, fault-tested multi-node platform.
 
-**Current implementation:** Phase 6 · `v0.6.0`
-**Verified implementation checkpoint:** `296fdd8`
-**Next:** Phase 7 — production delivery, Kubernetes/cloud deployment, CI/release engineering, and portfolio hardening.
+**Current implementation:** Phase 7A local Kubernetes delivery; AWS demonstration pending
+**Stable release checkpoint:** Phase 6 · `v0.6.0`
+**Next:** separately approved, temporary AWS EKS verification and teardown.
 
 ---
 
@@ -17,7 +17,21 @@ A seven-phase distributed-systems engineering project that evolves from a bounde
 - [Phase 1–7 capability evolution](docs/architecture/phase1-7-evolution.md)
 - [Complete architecture index](docs/architecture/README.md)
 - [Current Phase 6 architecture](docs/architecture/phase6-observability-chaos-performance.md)
-- [Planned Phase 7 production target](docs/architecture/phase7-production-delivery.md)
+- [Phase 7 local delivery and gated AWS target](docs/architecture/phase7-production-delivery.md)
+
+## Run Phase 7 on a laptop
+
+With Python 3.12, Docker, kind, kubectl, and Helm installed:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+make phase7-release-gate
+```
+
+This builds and validates the complete local package, then removes the cluster and private TLS material. See the [local Kubernetes runbook](docs/runbooks/phase7-local-kubernetes.md) and [Phase 7 verification status](docs/verification/phase7.md). No AWS resources are created by this command.
 
 ---
 

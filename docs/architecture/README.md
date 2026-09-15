@@ -1,6 +1,6 @@
 # Architecture Guide
 
-This guide separates implemented architecture from the planned production target. Phases 1–6 are implemented and verified; Phase 7 is a design target and is not yet implemented.
+This guide separates implemented architecture from the gated cloud target. Phases 1–6 and Phase 7 local Kubernetes delivery are implemented; the temporary AWS EKS demonstration remains pending separate approval.
 
 | Phase | Architecture focus | Status | Diagram |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ This guide separates implemented architecture from the planned production target
 | 4 | Causal metadata and CRDT convergence | Implemented and verified | [View](phase4-causal-crdt.md) |
 | 5 | Persistence, recovery, coordination and mTLS | Implemented and verified | [View](phase5-secure-persistence.md) |
 | 6 | Observability, chaos and performance | Implemented and verified | [View](phase6-observability-chaos-performance.md) |
-| 7 | Kubernetes and AWS EKS delivery | **Planned — not implemented** | [View](phase7-production-delivery.md) |
+| 7 | Kubernetes and AWS EKS delivery | **Local implemented; AWS pending** | [View](phase7-production-delivery.md) |
 | 1–7 | Cumulative capability evolution | Mixed status | [View](phase1-7-evolution.md) |
 
 ## Visual language

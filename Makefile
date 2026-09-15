@@ -98,7 +98,8 @@ phase5-secure-smoke:
 .PHONY: phase6-monitoring-up phase6-monitoring-down phase6-cluster \
 	phase6-observability-smoke phase6-chaos phase6-benchmark phase6-release-gate
 
-.PHONY: phase7-image phase7-image-inspect phase7-local-up phase7-local-down phase7-k3d-verify
+.PHONY: phase7-image phase7-image-inspect phase7-local-up phase7-local-down phase7-k3d-verify \
+	phase7-local-verify phase7-persistence-verify phase7-rollback-verify
 
 PHASE7_IMAGE ?= distsys-node:phase7-local
 
@@ -117,6 +118,25 @@ phase7-local-down:
 
 phase7-k3d-verify:
 	bash scripts/phase7/k3d_verify.sh
+
+phase7-local-verify:
+	PYTHONPATH=src $(PYTHON) scripts/phase7/verify_cluster.py --output .phase7/evidence/cluster.json
+
+phase7-persistence-verify:
+	PYTHONPATH=src $(PYTHON) scripts/phase7/verify_persistence.py --output .phase7/evidence/persistence.json
+
+phase7-rollback-verify:
+	bash scripts/phase7/verify_rollback.sh
+
+.PHONY: phase7-release-gate phase7-terraform-validate
+
+phase7-release-gate:
+	bash scripts/phase7/release_gate.sh
+
+phase7-terraform-validate:
+	terraform -chdir=deploy/terraform/aws fmt -check -recursive
+	terraform -chdir=deploy/terraform/aws init -backend=false
+	terraform -chdir=deploy/terraform/aws validate
 
 phase6-monitoring-up:
 	docker compose -p distsys-phase6 -f deploy/monitoring/docker-compose.yml up -d

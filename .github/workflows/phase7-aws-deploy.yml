@@ -1,0 +1,33 @@
+name: Phase 7 AWS Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      action: {description: "apply, verify, or destroy", required: true, type: choice, options: [apply, verify, destroy]}
+      expected_commit: {description: "Approved source commit", required: true, type: string}
+      approved_ghcr_digest: {description: "Approved sha256 digest", required: true, type: string}
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  controlled-action:
+    if: vars.AWS_PHASE7_ENABLED == 'true' && inputs.expected_commit == github.sha
+    environment: phase7-aws-demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: {role-to-assume: "${{ vars.AWS_ROLE_ARN }}", aws-region: ap-south-1}
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.9.8}
+      - name: Require digest binding
+        run: '[[ "${{ inputs.approved_ghcr_digest }}" == sha256:* ]]'
+      - name: Apply separately approved saved plan
+        if: inputs.action == 'apply'
+        run: 'echo "Download and checksum-match the reviewed plan before apply"; exit 1'
+      - name: Verify private endpoint first
+        if: inputs.action == 'verify'
+        run: bash scripts/phase7/verify_eks.sh
+      - name: Destroy and verify zero resources
+        if: inputs.action == 'destroy'
+        run: terraform -chdir=deploy/terraform/aws destroy -input=false && bash scripts/phase7/verify_aws_teardown.sh

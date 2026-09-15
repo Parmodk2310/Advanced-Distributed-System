@@ -220,23 +220,17 @@ Phase 6 does not claim consensus, linearizability, quorum durability, exactly-on
 
 ## Phase 7 — Production Delivery & Portfolio
 
-Add:
+Status: **LOCAL KUBERNETES IMPLEMENTED; AWS DEMONSTRATION PENDING SEPARATE APPROVAL**
+
+Implemented/owned:
 
 - `Dockerfile`
-- `compose.yaml`
-- `compose.monitoring.yaml`
-- extend `.github/workflows/ci.yml` with container and deployment gates
-- `.github/workflows/release.yml`
-- `deploy/terraform/aws/*` or `deploy/terraform/gcp/*`
-- optional `deploy/kubernetes/base/*`
-- optional `deploy/helm/distributed-system/*`
-- `docs/architecture.md`
-- `docs/protocol.md`
-- `docs/consistency.md`
-- `docs/failure-model.md`
-- `docs/security.md`
-- `docs/runbook.md`
-- `docs/performance-report.md`
-- `docs/recruiter-summary.md`
+- `deploy/helm/distributed-system/*`
+- `deploy/kind/*` and optional `deploy/k3d/*`
+- `scripts/phase7/*`
+- `.github/workflows/phase7-*`
+- `deploy/terraform/aws/*` with `enable_eks=false` by default
+- `docs/runbooks/phase7-*`
+- `docs/verification/phase7.md`
 
-Exit: repeatable deployment, CI quality gates, reproducible benchmark report, known limitations, and a recruiter/senior-engineer-ready README.
+Local exit: repeatable non-root image delivery, three-node StatefulSet, ephemeral mTLS, persistent restart, rollback, CI gates, and cleanup. Cloud exit remains pending an approved exact plan, temporary EKS verification, same-day destroy, and zero-resource evidence.
