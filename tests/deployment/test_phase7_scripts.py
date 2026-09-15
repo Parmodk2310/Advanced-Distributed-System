@@ -43,6 +43,8 @@ def test_cluster_creation_is_failure_safe() -> None:
     k3d = _read("scripts/phase7/k3d_verify.sh")
 
     assert "trap cleanup_on_exit EXIT INT TERM" in kind
+    assert "print_failure_diagnostics" in kind
+    assert "--all-containers --prefix --tail=100" in kind
     assert "cleanup_required=0" in kind
     assert "PHASE7_SKIP_BUILD:-0" in kind
     assert "trap cleanup EXIT INT TERM" in k3d

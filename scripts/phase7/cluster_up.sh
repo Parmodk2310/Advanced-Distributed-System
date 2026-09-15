@@ -9,8 +9,24 @@ done
 phase7_prepare_work_dir
 
 cleanup_required=1
+print_failure_diagnostics() {
+  if ! kubectl get namespace "$PHASE7_NAMESPACE" >/dev/null 2>&1; then
+    return
+  fi
+  printf '%s\n' '--- Phase 7 failure diagnostics: resources ---' >&2
+  kubectl -n "$PHASE7_NAMESPACE" get pods,pvc,svc,statefulset,events \
+    --sort-by=.metadata.creationTimestamp >&2 || true
+  printf '%s\n' '--- Phase 7 failure diagnostics: pod descriptions ---' >&2
+  kubectl -n "$PHASE7_NAMESPACE" describe pods >&2 || true
+  printf '%s\n' '--- Phase 7 failure diagnostics: node logs ---' >&2
+  kubectl -n "$PHASE7_NAMESPACE" logs \
+    "statefulset/$PHASE7_RELEASE-distributed-system" \
+    --all-containers --prefix --tail=100 >&2 || true
+}
+
 cleanup_on_exit() {
   if [[ "$cleanup_required" == "1" ]]; then
+    print_failure_diagnostics
     "$PHASE7_SCRIPT_DIR/cluster_down.sh"
   fi
 }
