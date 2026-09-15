@@ -244,3 +244,9 @@ def test_phase6_release_gate_waits_for_manifest_before_cluster_ready() -> None:
     )
 
     assert re.search(pattern, wait_block, re.DOTALL)
+
+def test_chaos_cli_requires_explicit_environment_opt_in() -> None:
+    script = Path("scripts/chaos.py").read_text(encoding="utf-8")
+
+    assert "require_chaos_opt_in()" in script
+    assert 'os.environ.setdefault("RUN_CHAOS_TESTS", "1")' not in script
