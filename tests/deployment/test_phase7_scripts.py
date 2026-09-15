@@ -13,6 +13,10 @@ def _script(name: str) -> str:
     return (PHASE7 / name).read_text(encoding="utf-8")
 
 
+def _shell_words(script: str) -> str:
+    return " ".join(script.replace("\\", " ").split())
+
+
 def test_kind_cluster_is_small_and_has_no_ingress_mapping() -> None:
     config = yaml.safe_load(KIND_CONFIG.read_text(encoding="utf-8"))
 
@@ -34,13 +38,14 @@ def test_common_helpers_pin_safe_workspace_and_names() -> None:
 
 def test_cluster_up_always_registers_cleanup() -> None:
     script = _script("cluster_up.sh")
+    normalized = _shell_words(script)
 
     assert "set -euo pipefail" in script
     assert "trap cleanup_on_error ERR INT TERM" in script
     assert "kind create cluster" in script
     assert "kind load docker-image" in script
     assert "helm upgrade --install" in script
-    normalized = script.replace("\\\\\n", " ")\n    assert "kubectl -n \"$PHASE7_NAMESPACE\" rollout status" in normalized
+    assert 'kubectl -n "$PHASE7_NAMESPACE" rollout status' in normalized
 
 
 def test_cluster_down_is_idempotent_and_removes_tls_material() -> None:
@@ -53,11 +58,12 @@ def test_cluster_down_is_idempotent_and_removes_tls_material() -> None:
 
 def test_tls_secret_is_streamed_without_persisted_manifest() -> None:
     script = _script("generate_tls_secret.sh")
+    normalized = _shell_words(script)
 
     assert "set -euo pipefail" in script
     assert "umask 077" in script
     assert "chmod 600" in script
-    normalized = script.replace("\\\\\n", " ")\n    assert "kubectl -n \"$PHASE7_NAMESPACE\" create secret generic" in normalized
+    assert 'kubectl -n "$PHASE7_NAMESPACE" create secret generic' in normalized
     assert "--dry-run=client -o yaml" in script
     assert "| kubectl apply -f -" in script
     assert "> secret.yaml" not in script
