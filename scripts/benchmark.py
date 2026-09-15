@@ -9,6 +9,7 @@ import ssl
 from pathlib import Path
 
 from distsys.benchmarking.model import BenchmarkConfig
+from distsys.benchmarking.retry import retry_transport
 from distsys.benchmarking.runner import BenchmarkRunner
 from distsys.client import DistributedClient
 from distsys.crdt_client import CrdtClient
@@ -108,10 +109,15 @@ async def main() -> int:
 
     async def prepare_crdt_key() -> None:
         writer = _crdt_client(_PORTS[0], crdt_ssl)
-        seeded = await writer.increment(counter_key)
+        seeded = await retry_transport(lambda: writer.increment(counter_key))
         for port in _PORTS:
             reader = _crdt_client(port, crdt_ssl)
-            observed = await reader.read(counter_key, causal_token=seeded.causal_token)
+            observed = await retry_transport(
+                lambda reader=reader: reader.read(
+                    counter_key,
+                    causal_token=seeded.causal_token,
+                )
+            )
             if not isinstance(observed.value, int):
                 raise TypeError(f"CRDT correctness failure on port {port}: {observed.value!r}")
 
