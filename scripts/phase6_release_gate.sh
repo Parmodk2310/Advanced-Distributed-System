@@ -48,6 +48,14 @@ for scenario in network-delay partition etcd-outage node-kill; do
   RUN_CHAOS_TESTS=1 PYTHONPATH=src python scripts/chaos.py "$scenario" --target node-1 --max-seconds 30
   sleep 1
 done
+
+# Chaos recovery is observed through a fresh probe client. The long-lived nodes may
+# still have the target peer's circuit breaker open (10 seconds by default), so
+# allow that bounded recovery window to expire before measuring transport errors.
+BREAKER_RECOVERY_WAIT_SECONDS="${PHASE6_BREAKER_RECOVERY_WAIT_SECONDS:-11}"
+echo "Waiting ${BREAKER_RECOVERY_WAIT_SECONDS}s for peer circuit breakers to recover"
+sleep "$BREAKER_RECOVERY_WAIT_SECONDS"
+
 RUN_PERFORMANCE_TESTS=1 PYTHONPATH=src python scripts/benchmark.py --profile quick --workload task
 RUN_PERFORMANCE_TESTS=1 PYTHONPATH=src python scripts/benchmark.py --profile quick --workload crdt
 
