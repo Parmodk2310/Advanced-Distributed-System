@@ -8,7 +8,9 @@ from tests.integration.cluster_helpers import cluster_settings, wait_until
 
 
 @pytest.mark.asyncio
-async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_factory):
+async def test_stopped_node_transitions_to_suspect_then_dead(
+    unused_tcp_port_factory,
+):
     p0, p1 = [unused_tcp_port_factory() for _ in range(2)]
     node0 = DistributedNode(cluster_settings(node_id="node-0", port=p0))
     node1 = DistributedNode(
