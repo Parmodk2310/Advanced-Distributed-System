@@ -1,0 +1,14 @@
+image:
+  repository: ""
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+  releaseMode: true
+
+persistence:
+  storageClass: gp3
+  size: 2Gi
+
+observability:
+  enabled: true
+  tracingEnabled: true
