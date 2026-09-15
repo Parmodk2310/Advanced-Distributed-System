@@ -4,12 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
-
-T = TypeVar("T")
-
-
-async def retry_transport(
+async def retry_transport[T](
     operation: Callable[[], Awaitable[T]],
     *,
     attempts: int = 5,
