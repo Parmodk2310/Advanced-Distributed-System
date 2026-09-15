@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import yaml
@@ -41,7 +40,7 @@ def test_cluster_up_always_registers_cleanup() -> None:
     assert "kind create cluster" in script
     assert "kind load docker-image" in script
     assert "helm upgrade --install" in script
-    assert re.search(r"kubectl\\s+(?:-n \"\\$PHASE7_NAMESPACE\"\\s+)?rollout status", script)
+    normalized = script.replace("\\\\\n", " ")\n    assert "kubectl -n \"$PHASE7_NAMESPACE\" rollout status" in normalized
 
 
 def test_cluster_down_is_idempotent_and_removes_tls_material() -> None:
@@ -58,7 +57,7 @@ def test_tls_secret_is_streamed_without_persisted_manifest() -> None:
     assert "set -euo pipefail" in script
     assert "umask 077" in script
     assert "chmod 600" in script
-    assert re.search(r"kubectl\\s+-n \"\\$PHASE7_NAMESPACE\"\\s+create secret generic", script)
+    normalized = script.replace("\\\\\n", " ")\n    assert "kubectl -n \"$PHASE7_NAMESPACE\" create secret generic" in normalized
     assert "--dry-run=client -o yaml" in script
     assert "| kubectl apply -f -" in script
     assert "> secret.yaml" not in script
