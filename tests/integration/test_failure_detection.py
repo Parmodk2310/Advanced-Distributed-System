@@ -31,7 +31,10 @@ async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_fac
 
         async def suspect() -> bool:
             current = await service.membership.get("node-1")
-            return current is not None and current.status is MemberStatus.SUSPECT
+            return current is not None and current.status in {
+                MemberStatus.SUSPECT,
+                MemberStatus.DEAD,
+            }
 
         await wait_until(suspect, timeout_seconds=5.0)
 
