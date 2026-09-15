@@ -12,3 +12,15 @@ def test_release_gate_benchmarks_clean_cluster_before_chaos() -> None:
 
     assert observability < monitoring < task_benchmark < crdt_benchmark < chaos
     assert "BREAKER_RECOVERY_WAIT_SECONDS" not in script
+
+
+def test_cluster_runner_exits_after_signal_cleanup() -> None:
+    script = Path("scripts/run_phase6_cluster.sh").read_text(encoding="utf-8")
+
+    assert "trap cleanup EXIT" in script
+    assert "trap terminate INT TERM" in script
+    terminate = script[script.index("terminate() {") :]
+    terminate = terminate[: terminate.index("}\n")]
+
+    assert "cleanup" in terminate
+    assert "exit 0" in terminate
