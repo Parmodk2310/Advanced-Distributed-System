@@ -123,3 +123,14 @@ phase6-benchmark:
 
 phase6-release-gate:
 	bash scripts/phase6_release_gate.sh
+
+.PHONY: phase7-image phase7-local-up phase7-local-down
+
+phase7-image:
+	docker build --pull -t distsys-node:phase7-local .
+
+phase7-local-up:
+	bash scripts/phase7/cluster_up.sh
+
+phase7-local-down:
+	bash scripts/phase7/cluster_down.sh
