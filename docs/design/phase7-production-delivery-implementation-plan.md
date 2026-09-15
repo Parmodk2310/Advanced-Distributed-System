@@ -18,6 +18,10 @@
 - The repository remains private; do not create a release or merge another branch.
 - Existing Phase 1–6 runtime behavior and non-guarantees remain unchanged.
 - Release-mode workloads must use an image digest, never only a mutable tag.
+- GHCR is the canonical registry; ECR receives the approved GHCR artifact without rebuilding it.
+- `kind` is the required local and CI runtime; `k3d` is optional and must use the same chart and smoke contract.
+- The AWS demonstration profile uses public worker-node networking, no NAT Gateway, and one on-demand `t3.medium` managed node with desired/minimum/maximum sizes `1/1/2`.
+- EKS verification must pass through `kubectl port-forward` before creating a temporary AWS Load Balancer.
 - Long-lived AWS access keys, generated private keys, Terraform state, kubeconfig, and sensitive plan files must never enter Git.
 - GitHub-to-AWS authentication uses OIDC and least-privilege roles.
 - Terraform owns AWS infrastructure; Helm owns Kubernetes application resources.
@@ -34,11 +38,11 @@
 |---|---|---|
 | Container | `Dockerfile`, `.dockerignore` | Reproducible non-root runtime image |
 | Helm | `deploy/helm/distributed-system/**` | Application resources and release validation |
-| kind | `deploy/kind/cluster.yaml` | Laptop-safe and CI-equivalent local cluster |
+| Local Kubernetes | `deploy/kind/cluster.yaml`, `deploy/k3d/cluster.yaml` | Required kind gate and optional k3d parity path |
 | Local orchestration | `scripts/phase7/*.sh` | Certificates, build/load, install, verify, cleanup |
 | Deployment tests | `tests/deployment/**` | Static contracts and live-cluster assertions |
 | Terraform | `deploy/terraform/aws/**` | Cost-bounded ECR/EKS/VPC/IAM infrastructure |
-| CI/CD | `.github/workflows/phase7-*.yml`, `.github/workflows/ci.yml` | Quality, local delivery, AWS plan, gated apply/destroy |
+| CI/CD | `.github/workflows/phase7-*.yml`, `.github/workflows/ci.yml` | Quality, GHCR publication, local delivery, AWS plan, gated promotion/apply/destroy |
 | Documentation | `docs/runbooks/**`, `docs/verification/phase7.md`, README/roadmap/architecture pages | Operations, evidence, and honest status |
 
 ### Task 1: Hardened immutable node image
@@ -149,25 +153,27 @@ git add deploy/helm tests/deployment/test_helm_contract.py
 git commit -m "feat(phase7): add Helm release contract"
 ```
 
-### Task 3: Reproducible kind cluster and ephemeral mTLS
+### Task 3: Reproducible kind cluster, optional k3d parity, and ephemeral mTLS
 
 **Files:**
 - Create: `deploy/kind/cluster.yaml`
+- Create: `deploy/k3d/cluster.yaml`
 - Create: `scripts/phase7/common.sh`
 - Create: `scripts/phase7/generate_tls_secret.sh`
 - Create: `scripts/phase7/cluster_up.sh`
 - Create: `scripts/phase7/cluster_down.sh`
+- Create: `scripts/phase7/k3d_verify.sh`
 - Create: `tests/deployment/test_phase7_scripts.py`
 - Modify: `.gitignore`
 - Modify: `Makefile`
 
 **Interfaces:**
-- Produces: kind cluster `distsys-phase7`, namespace `distsys`, Secret `distsys-node-tls`, and loaded local image
+- Produces: required kind cluster `distsys-phase7`, optional k3d cluster `distsys-phase7-k3d`, namespace `distsys`, Secret `distsys-node-tls`, and the same loaded local image
 - Safety: all temporary material lives below `.phase7/`; `cluster_up.sh` registers `cluster_down.sh` with `trap`
 
 - [ ] **Step 1: Write failing script safety tests**
 
-Assert strict shell mode, fixed cluster/namespace defaults, cleanup trap, refusal to accept a broad or empty work directory, restrictive certificate permissions, no secret output, and no `kubectl create secret --dry-run ... > tracked/path` behavior.
+Assert strict shell mode, fixed cluster/namespace defaults, cleanup trap, refusal to accept a broad or empty work directory, restrictive certificate permissions, no secret output, no `kubectl create secret --dry-run ... > tracked/path` behavior, and identical Helm values/smoke entry points for kind and k3d.
 
 - [ ] **Step 2: Confirm failure**
 
@@ -177,7 +183,7 @@ Expected: FAIL because scripts and kind configuration are absent.
 
 - [ ] **Step 3: Implement kind and common safety helpers**
 
-Use one control-plane node, disable default ingress, and retain kind's default storage provisioner. In `common.sh`, resolve the repository root, validate `.phase7` as the only generated workspace, and centralize tool/version checks.
+Use one kind control-plane node, disable default ingress, and retain kind's default storage provisioner. Define a one-server k3d profile that loads the same image and invokes the same Helm chart and verifier; keep it optional and outside the required CI gate. In `common.sh`, resolve the repository root, validate `.phase7` as the only generated workspace, and centralize tool/version checks.
 
 - [ ] **Step 4: Implement ephemeral certificates**
 
@@ -198,14 +204,15 @@ kubectl -n distsys get pods,pvc,svc
 make phase7-local-down
 kind get clusters
 test ! -d .phase7/tls
+scripts/phase7/k3d_verify.sh
 ```
 
-Expected: three ready node pods, per-node PVCs, internal Services, no remaining `distsys-phase7` cluster, and no TLS workspace.
+Expected: kind produces three ready node pods, per-node PVCs, internal Services, no remaining `distsys-phase7` cluster, and no TLS workspace. When k3d is installed, the optional parity script runs the same chart and smoke contract and removes `distsys-phase7-k3d`; when absent, it exits with a documented skip code without weakening the kind gate.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add deploy/kind scripts/phase7 .gitignore Makefile tests/deployment/test_phase7_scripts.py
+git add deploy/kind deploy/k3d scripts/phase7 .gitignore Makefile tests/deployment/test_phase7_scripts.py
 git commit -m "feat(phase7): add safe kind lifecycle"
 ```
 
@@ -269,17 +276,18 @@ git commit -m "test(phase7): verify Kubernetes delivery and rollback"
 
 **Files:**
 - Create: `.github/workflows/phase7-local-kubernetes.yml`
+- Create: `.github/workflows/phase7-image-publish.yml`
 - Create: `.github/policies/kubernetes.rego`
 - Create: `tests/deployment/test_phase7_workflows.py`
 - Modify: `.github/workflows/ci.yml`
 
 **Interfaces:**
-- Produces: read-only PR/push checks and sanitized evidence artifacts
-- Permissions: `contents: read`; no cloud credentials; no package write permission in the local gate
+- Produces: read-only PR checks, sanitized evidence artifacts, and a GHCR image identified by SHA-256 digest after protected-branch success
+- Permissions: local gate uses `contents: read`; the publication job alone receives `packages: write` and never receives AWS credentials
 
 - [ ] **Step 1: Write failing workflow contract tests**
 
-Parse YAML with PyYAML and assert pinned action major versions, least privilege, timeouts, concurrency, BuildKit cache, Gitleaks, Trivy, SBOM generation, Helm lint/template, kubeconform, Conftest, kind lifecycle, smoke tests, and unconditional cleanup. Reject `pull_request_target`, static AWS keys, unbounded artifact retention, and skipped security exit codes.
+Parse YAML with PyYAML and assert pinned action versions, least privilege, timeouts, concurrency, BuildKit cache, Gitleaks, Trivy, SBOM generation, provenance, Helm lint/template, kubeconform, Conftest, kind lifecycle, smoke tests, and unconditional cleanup. Require GHCR publication only after all image and local gates pass, record the source commit and manifest digest, and reject `pull_request_target`, static AWS keys, unbounded artifact retention, skipped security exit codes, or mutable-tag-only deployment.
 
 - [ ] **Step 2: Confirm failure**
 
@@ -289,11 +297,11 @@ Expected: FAIL because the Phase 7 workflow and policy do not exist.
 
 - [ ] **Step 3: Implement static and supply-chain jobs**
 
-Keep existing Python quality unchanged. Add focused jobs for filesystem secrets, dependency/image vulnerabilities, SBOM, Helm/schema/policy validation, and Terraform static checks. Use immutable tool versions or pinned actions and block Critical/High findings.
+Keep existing Python quality unchanged. Add focused jobs for filesystem secrets, dependency/image vulnerabilities, SBOM, provenance, Helm/schema/policy validation, and Terraform static checks. Use immutable tool versions or pinned actions and block Critical/High findings.
 
-- [ ] **Step 4: Implement kind integration job**
+- [ ] **Step 4: Implement kind integration and GHCR publication jobs**
 
-Build once, load the exact image ID into kind, install the chart, run Task 4 gates, upload only sanitized JSON evidence, and always delete the cluster and `.phase7`.
+Build once, load the exact image ID into kind, install the chart, run Task 4 gates, upload only sanitized JSON evidence, and always delete the cluster and `.phase7`. After protected-branch success, publish that verified manifest to `ghcr.io/<owner>/advanced-distributed-system`, emit its SHA-256 digest, attach the SBOM and provenance, and sign with keyless GitHub OIDC when supported. Never rebuild between local verification and publication.
 
 - [ ] **Step 5: Validate workflow contracts**
 
@@ -343,7 +351,7 @@ git commit -m "ci(phase7): add Kubernetes and supply-chain gates"
 
 - [ ] **Step 1: Write failing Terraform contract tests**
 
-Assert disabled-by-default EKS, `ap-south-1` example, budget threshold, mandatory tags, no default NAT Gateway, no unrestricted Kubernetes API CIDR, encrypted EBS, private ECR scanning, ECR lifecycle, least-privilege IAM, OIDC inputs, and no Helm/Kubernetes provider resources.
+Assert disabled-by-default EKS, `ap-south-1` example, budget threshold, mandatory tags, two public subnets, no NAT Gateway, no unrestricted Kubernetes API CIDR, encrypted EBS, private ECR scanning, ECR lifecycle, least-privilege IAM, OIDC inputs, one on-demand `t3.medium` managed node by default, node sizes `1/1/2`, and no Helm/Kubernetes provider resources.
 
 - [ ] **Step 2: Verify failure**
 
@@ -357,7 +365,7 @@ Use remote-state-ready configuration, provider default tags, validation for budg
 
 - [ ] **Step 4: Implement low-cost network, ECR, EKS, and IAM**
 
-Use two availability zones, explicit subnet/routing choices, no NAT Gateway by default, one small managed node group with minimum/desired values suitable for a temporary demo, encrypted storage, restricted control-plane access, and IRSA-ready roles. Ensure `enable_eks=false` yields no EKS/node-group resources.
+Use two public subnets across two availability zones, explicit routing through an Internet Gateway, no NAT Gateway, one on-demand `t3.medium` managed node group with minimum/desired/maximum values `1/1/2`, encrypted storage, restricted control-plane CIDRs, restrictive node security groups, and IRSA-ready roles. Document this as a temporary cost-controlled profile rather than a production private-node topology. Ensure `enable_eks=false` yields no EKS/node-group resources.
 
 - [ ] **Step 5: Validate without AWS access**
 
@@ -387,17 +395,21 @@ git commit -m "feat(phase7): add cost-bounded EKS infrastructure"
 **Files:**
 - Create: `.github/workflows/phase7-aws-plan.yml`
 - Create: `.github/workflows/phase7-aws-deploy.yml`
+- Create: `scripts/phase7/promote_ghcr_to_ecr.sh`
+- Create: `scripts/phase7/verify_eks.sh`
+- Create: `scripts/phase7/enable_public_endpoint.sh`
+- Create: `scripts/phase7/disable_public_endpoint.sh`
 - Create: `scripts/phase7/verify_aws_teardown.sh`
 - Modify: `tests/deployment/test_phase7_workflows.py`
 
 **Interfaces:**
 - GitHub variables: `AWS_PHASE7_ENABLED` defaults absent/false, `AWS_REGION=ap-south-1`, `AWS_ROLE_ARN`
 - Protected environment: `phase7-aws-demo`
-- Deployment inputs: exact plan artifact ID, expected commit SHA, `action=apply|destroy`
+- Deployment inputs: exact plan artifact ID, expected commit SHA, approved GHCR digest, and `action=apply|verify|destroy`
 
 - [ ] **Step 1: Extend failing workflow tests**
 
-Require manual dispatch, OIDC `id-token: write` only in AWS jobs, explicit false-by-default gate, protected environment, exact plan/commit binding, no `apply -auto-approve` outside the gated job, guaranteed destroy path, and tagged-resource teardown verification.
+Require manual dispatch, OIDC `id-token: write` only in AWS jobs, explicit false-by-default gate, protected environment, exact plan/commit/GHCR-digest binding, no `apply -auto-approve` outside the gated job, digest-preserving ECR promotion, port-forward verification before public exposure, temporary load-balancer deletion, guaranteed destroy path, and tagged-resource teardown verification.
 
 - [ ] **Step 2: Confirm failure**
 
@@ -411,11 +423,11 @@ Authenticate through OIDC, run read-only account identity and Terraform plan wit
 
 - [ ] **Step 4: Implement deploy workflow**
 
-Require manual action, protected-environment approval, exact source commit, exact saved plan, and a second enablement check. Apply only the reviewed plan. The destroy action must generate and apply a destroy plan, then call the teardown verifier.
+Require manual action, protected-environment approval, exact source commit, exact saved plan, exact approved GHCR digest, and a second enablement check. Apply only the reviewed plan. Copy the approved OCI manifest from GHCR to ECR without rebuilding it, resolve both registry digests, and fail unless manifest equivalence is proven. Deploy the ECR digest through Helm, verify first through `kubectl port-forward`, then create the temporary AWS Load Balancer, run health/routing/observability/scaling/rollback checks, capture sanitized evidence, and delete the load balancer. The destroy action must generate and apply a destroy plan, then call the teardown verifier.
 
 - [ ] **Step 5: Implement teardown verification**
 
-Query region-scoped resources by the mandatory Phase 7 tags and explicitly check EKS clusters/node groups, load balancers, NAT Gateways, EBS volumes, Elastic IPs, ECR policy expectations, and CloudFormation leftovers. Exit non-zero with resource identifiers when any unexpected billable resource remains.
+Query region-scoped resources by the mandatory Phase 7 tags and explicitly check EKS clusters/node groups, load balancers, NAT Gateways, EBS volumes, Elastic IPs, ECR policy expectations, and CloudFormation leftovers. Treat an unexpected NAT Gateway as a contract violation. Exit non-zero with resource identifiers when any unexpected billable resource remains.
 
 - [ ] **Step 6: Validate statically only**
 
@@ -423,6 +435,9 @@ Run:
 
 ```bash
 python -m pytest tests/deployment/test_phase7_workflows.py -q
+bash -n scripts/phase7/promote_ghcr_to_ecr.sh
+bash -n scripts/phase7/enable_public_endpoint.sh
+bash -n scripts/phase7/disable_public_endpoint.sh
 bash -n scripts/phase7/verify_aws_teardown.sh
 ```
 
@@ -431,7 +446,7 @@ Expected: PASS. Do not dispatch either AWS workflow during Phase 7A.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add .github/workflows/phase7-aws-plan.yml   .github/workflows/phase7-aws-deploy.yml   scripts/phase7/verify_aws_teardown.sh   tests/deployment/test_phase7_workflows.py
+git add .github/workflows/phase7-aws-plan.yml .github/workflows/phase7-aws-deploy.yml scripts/phase7/promote_ghcr_to_ecr.sh scripts/phase7/verify_eks.sh scripts/phase7/enable_public_endpoint.sh scripts/phase7/disable_public_endpoint.sh scripts/phase7/verify_aws_teardown.sh tests/deployment/test_phase7_workflows.py
 git commit -m "ci(phase7): gate AWS plan deployment and teardown"
 ```
 
@@ -455,7 +470,7 @@ git commit -m "ci(phase7): gate AWS plan deployment and teardown"
 
 - [ ] **Step 1: Write failing documentation contract tests**
 
-Validate relative links, exact status language, required teardown warnings, non-guarantees, local commands, cost ceiling, AWS approval gate, recovery/rollback limitations, and absence of completion claims without evidence fields.
+Validate relative links, exact status language, required teardown warnings, non-guarantees, kind and optional k3d commands, GHCR-to-ECR provenance, cost ceiling, no-NAT public-node limitation, private-first verification, temporary-load-balancer removal, AWS approval gate, recovery/rollback limitations, and absence of completion claims without evidence fields.
 
 - [ ] **Step 2: Confirm failure**
 
@@ -465,7 +480,7 @@ Expected: FAIL because runbooks and verification record are absent.
 
 - [ ] **Step 3: Write operational runbooks**
 
-Document prerequisites, pinned tool versions, local lifecycle, troubleshooting, rollback, certificate rotation, OIDC, Terraform plan review, cost inventory, apply authorization, evidence capture, destroy, and zero-resource verification. Never include real account IDs, role ARNs, credentials, certificate contents, or personal email addresses.
+Document prerequisites, pinned tool versions, required kind lifecycle, optional k3d parity, troubleshooting, rollback, certificate rotation, GHCR publication, digest-preserving ECR promotion, OIDC, Terraform plan review, cost inventory, the public-node security trade-off, port-forward-first verification, temporary load-balancer lifecycle, apply authorization, evidence capture, destroy, and zero-resource verification. Never include real account IDs, role ARNs, credentials, certificate contents, or personal email addresses.
 
 - [ ] **Step 4: Create the verification record**
 
@@ -501,7 +516,7 @@ git commit -m "docs(phase7): publish delivery runbooks and evidence"
 
 - [ ] **Step 1: Implement fail-closed orchestration**
 
-Use strict shell mode and an EXIT trap. Run Python quality, container contracts/build/inspection, Helm/schema/policy validation, Terraform static validation, workflow/documentation contracts, kind deployment, mTLS rejection, CRDT convergence, persistence restart, observability, rollout, rollback, and cleanup.
+Use strict shell mode and an EXIT trap. Run Python quality, container contracts/build/inspection, Helm/schema/policy validation, Terraform static validation, workflow/documentation contracts, required kind deployment, optional k3d parity when installed, mTLS rejection, CRDT convergence, persistence restart, observability, rollout, rollback, and cleanup.
 
 - [ ] **Step 2: Run focused static suite**
 
@@ -563,13 +578,16 @@ Push the tested commit to `main`, wait for Quality and Phase 7 Local Kubernetes 
 Stop after Phase 7A. Present the following to the user in one review:
 
 - exact source commit;
-- image digest;
+- canonical GHCR image digest and provenance/SBOM references;
+- proposed ECR repository and digest-equivalence procedure;
 - chart version;
 - Terraform plan summary and plan checksum;
 - full AWS resource inventory;
 - estimated hourly and same-day cost;
 - budget alert configuration;
 - public endpoint and IPv4/NAT/load-balancer costs;
+- confirmation that the reviewed plan contains no NAT Gateway;
+- port-forward verification procedure and temporary load-balancer lifetime;
 - deployment duration;
 - teardown commands and verification checks.
 
