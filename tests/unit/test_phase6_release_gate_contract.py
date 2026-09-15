@@ -24,3 +24,6 @@ def test_cluster_runner_exits_after_signal_cleanup() -> None:
 
     assert "cleanup" in terminate
     assert "exit 0" in terminate
+    assert "while true; do sleep 3600; done" not in script
+    assert "RUNNER_IDLE_PID=$!" in script
+    assert 'wait "$RUNNER_IDLE_PID"' in script
