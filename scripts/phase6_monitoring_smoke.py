@@ -29,6 +29,36 @@ def fetch_status(url: str) -> int:
         return response.status
 
 
+def healthy_prometheus_targets(payload):
+    active = payload["data"]["activeTargets"]
+    return [
+        target
+        for target in active
+        if target.get("health") == "up"
+        and target.get("labels", {}).get("job") == "distsys-phase6"
+    ]
+
+
+def wait_for_healthy_prometheus_targets(seconds: float = 30.0):
+    url = "http://127.0.0.1:9090/api/v1/targets"
+    deadline = time.monotonic() + seconds
+    last_count = 0
+    last_error: BaseException | None = None
+    while time.monotonic() < deadline:
+        try:
+            healthy = healthy_prometheus_targets(fetch_json(url))
+            last_count = len(healthy)
+            if last_count == 3:
+                return healthy
+        except Exception as exc:  # noqa: BLE001 - Prometheus may still be starting
+            last_error = exc
+        time.sleep(0.5)
+    raise RuntimeError(
+        "timed out waiting for 3 healthy Prometheus node targets; "
+        f"last_count={last_count}, last_error={last_error}"
+    )
+
+
 def wait_json(url: str, seconds: float = 30.0):
     deadline = time.monotonic() + seconds
     last: BaseException | None = None
@@ -89,15 +119,7 @@ async def main() -> int:
     parser.add_argument("--cert-dir", type=Path, default=Path("certs/generated"))
     args = parser.parse_args()
 
-    targets = await asyncio.to_thread(wait_json, "http://127.0.0.1:9090/api/v1/targets")
-    active = targets["data"]["activeTargets"]
-    healthy = [
-        target
-        for target in active
-        if target.get("health") == "up" and target.get("labels", {}).get("job") == "distsys-phase6"
-    ]
-    if len(healthy) != 3:
-        raise SystemExit(f"expected 3 healthy Prometheus node targets, got {len(healthy)}")
+    healthy = await asyncio.to_thread(wait_for_healthy_prometheus_targets)
 
     grafana = await asyncio.to_thread(wait_json, "http://127.0.0.1:3000/api/health")
     if grafana.get("database") != "ok":
