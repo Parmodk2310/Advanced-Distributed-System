@@ -119,7 +119,7 @@ async def main() -> int:
     parser.add_argument("--cert-dir", type=Path, default=Path("certs/generated"))
     args = parser.parse_args()
 
-    healthy = await asyncio.to_thread(wait_for_healthy_prometheus_targets)
+    await asyncio.to_thread(wait_for_healthy_prometheus_targets)
 
     grafana = await asyncio.to_thread(wait_json, "http://127.0.0.1:3000/api/health")
     if grafana.get("database") != "ok":
