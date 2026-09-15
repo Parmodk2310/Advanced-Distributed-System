@@ -1,6 +1,9 @@
 name: Phase 7 Local Kubernetes
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["Dockerfile", "deploy/**", "scripts/phase7/**", "tests/deployment/**", ".github/workflows/phase7-*.yml"]
   pull_request:
     paths: ["Dockerfile", "deploy/**", "scripts/phase7/**", "tests/deployment/**", ".github/workflows/phase7-*.yml"]
 concurrency:

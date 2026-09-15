@@ -21,4 +21,10 @@ jobs:
       - run: terraform -chdir=deploy/terraform/aws plan -input=false -out=phase7.tfplan -var=enable_eks=true
       - run: terraform -chdir=deploy/terraform/aws show -no-color phase7.tfplan > phase7-plan.txt && sha256sum deploy/terraform/aws/phase7.tfplan > phase7-plan.sha256
       - uses: actions/upload-artifact@v4
-        with: {name: phase7-reviewed-plan-${{ github.sha }}, path: "deploy/terraform/aws/phase7.tfplan\nphase7-plan.txt\nphase7-plan.sha256", retention-days: 3}
+        with:
+          name: "phase7-reviewed-plan-${{ github.sha }}"
+          path: |
+            deploy/terraform/aws/phase7.tfplan
+            phase7-plan.txt
+            phase7-plan.sha256
+          retention-days: 3
