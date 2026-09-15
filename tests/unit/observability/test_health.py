@@ -43,7 +43,7 @@ async def _get(port: int, path: str) -> tuple[int, dict[str, str], bytes]:
 
 
 @pytest.mark.asyncio
-async def test_ready_route_tracks_snapshot_and_hides_internal_details():
+async def test_ready_route_tracks_snapshot_and_hides_internal_details(unused_tcp_port):
     state = NodeHealthSnapshot(
         liveness=True,
         readiness=False,
@@ -57,7 +57,13 @@ async def test_ready_route_tracks_snapshot_and_hides_internal_details():
     async def snapshot():
         return state
 
-    server = ObservabilityServer("127.0.0.1", 0, "node-a", Metrics("node-a"), snapshot)
+    server = ObservabilityServer(
+        "127.0.0.1",
+        unused_tcp_port,
+        "node-a",
+        Metrics("node-a"),
+        snapshot,
+    )
     await server.start()
     try:
         status, headers, body = await _get(server.bound_port, "/health/ready")
@@ -78,12 +84,18 @@ async def test_ready_route_tracks_snapshot_and_hides_internal_details():
 
 
 @pytest.mark.asyncio
-async def test_metrics_live_not_found_and_method_not_allowed():
+async def test_metrics_live_not_found_and_method_not_allowed(unused_tcp_port):
     async def snapshot():
         return NodeHealthSnapshot(readiness=True, recovery_phase=RecoveryPhase.READY)
 
     metrics = Metrics("node-a")
-    server = ObservabilityServer("127.0.0.1", 0, "node-a", metrics, snapshot)
+    server = ObservabilityServer(
+        "127.0.0.1",
+        unused_tcp_port,
+        "node-a",
+        metrics,
+        snapshot,
+    )
     await server.start()
     try:
         status, _, body = await _get(server.bound_port, "/health/live")

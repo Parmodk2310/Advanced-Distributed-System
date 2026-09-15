@@ -134,7 +134,10 @@ class Metrics:
             registry=self.registry,
         )
         self.rate_limited_total = Counter(
-            "distsys_rate_limited_total", "Rate-limited requests", ["node_id"], registry=self.registry
+            "distsys_rate_limited_total",
+            "Rate-limited requests",
+            ["node_id"],
+            registry=self.registry,
         )
         self.overloaded_total = Counter(
             "distsys_overloaded_total",

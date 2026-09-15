@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+
+
 async def retry_transport[T](
     operation: Callable[[], Awaitable[T]],
     *,

@@ -45,14 +45,12 @@ def test_prometheus_targets_and_grafana_provisioning_are_complete():
     } <= titles
     assert all(panel.get("description") for panel in dashboard["panels"])
 
+
 def test_tempo_3_compaction_schema_preserves_two_hour_retention():
     tempo = yaml.safe_load((ROOT / "deploy/monitoring/tempo/tempo.yml").read_text())
     assert "compactor" not in tempo
     assert (
-        tempo["backend_scheduler"]["provider"]["compaction"]["compaction"][
-            "block_retention"
-        ]
+        tempo["backend_scheduler"]["provider"]["compaction"]["compaction"]["block_retention"]
         == "2h"
     )
     assert tempo["backend_worker"]["compaction"]["block_retention"] == "2h"
-
