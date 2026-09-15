@@ -1,8 +1,9 @@
 from dataclasses import replace
 
 import pytest
-from distsys.crdt import GCounter
+
 from distsys.cluster.member import MemberStatus, SeedAddress
+from distsys.crdt import GCounter
 from distsys.crdt_client import CrdtClient
 from distsys.node import DistributedNode
 from tests.integration.cluster_helpers import cluster_settings, wait_until
