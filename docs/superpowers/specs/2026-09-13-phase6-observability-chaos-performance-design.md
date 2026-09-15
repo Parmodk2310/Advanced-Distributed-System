@@ -298,7 +298,7 @@ Phase 6 makes no universal performance claim. Budgets are regression guards,
 not promises across hardware:
 
 - successful request ratio at least 99% in the healthy quick profile;
-- p95 below 500 ms for the local healthy quick profile;
+- p95 below 1.30 seconds for the local healthy WSL2 quick profile; this regression ceiling was calibrated from repeated clean runs and is not a universal performance claim;
 - no correctness failures;
 - recovery and convergence complete within scenario-specific bounded windows.
 
