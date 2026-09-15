@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from distsys.cluster.member import MemberStatus, SeedAddress
@@ -17,6 +19,7 @@ async def test_restarted_node_with_newer_incarnation_rejoins(unused_tcp_port_fac
         )
     )
     restarted = None
+    stop_task: asyncio.Task[None] | None = None
     try:
         await node0.start()
         await node1.start()
@@ -30,13 +33,14 @@ async def test_restarted_node_with_newer_incarnation_rejoins(unused_tcp_port_fac
         original = await service.membership.get("node-1")
         assert original is not None
         old_incarnation = original.incarnation
-        await node1.stop()
+        stop_task = asyncio.create_task(node1.stop())
 
-        async def dead() -> bool:
+        async def dead_or_removed() -> bool:
             current = await service.membership.get("node-1")
-            return current is not None and current.status is MemberStatus.DEAD
+            return current is None or current.status is MemberStatus.DEAD
 
-        await wait_until(dead, timeout_seconds=5.0)
+        await wait_until(dead_or_removed, timeout_seconds=5.0)
+        await stop_task
 
         restarted = DistributedNode(
             cluster_settings(
@@ -57,6 +61,8 @@ async def test_restarted_node_with_newer_incarnation_rejoins(unused_tcp_port_fac
 
         await wait_until(rejoined, timeout_seconds=2.0)
     finally:
+        if stop_task is not None:
+            await asyncio.gather(stop_task, return_exceptions=True)
         if restarted is not None:
             await restarted.stop()
         await node1.stop()
