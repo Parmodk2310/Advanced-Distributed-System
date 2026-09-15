@@ -1,0 +1,8 @@
+flowchart LR
+  S["PHASE 4 · IMPLEMENTED AND VERIFIED"]
+  T["Client causal token"] --> V["Causal validation"] --> D["Dotted mutation identity"]
+  D --> C["Local CRDT merge<br/>GCounter · PNCounter · ORSet · MVRegister"]
+  C --> R["RF=3 replica selection"] --> A["Async full-state replication"] --> X["Converged replicas"]
+  P["Targeted causal repair"] --> X
+  E["Digest anti-entropy"] --> X
+  S -.-> C

@@ -1,0 +1,16 @@
+digraph Phase2 {
+  graph [rankdir=LR, bgcolor="transparent", label="PHASE 2 — IMPLEMENTED AND VERIFIED", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", fillcolor="#DBEAFE", color="#2563EB"];
+  edge [color="#475569", penwidth=1.6];
+  request [label="Request"];
+  deadline [label="Monotonic deadline", fillcolor="#FEF3C7", color="#D97706"];
+  limiter [label="Token-bucket\nrate limiter", fillcolor="#FEF3C7", color="#D97706"];
+  pressure [label="Bounded admission", fillcolor="#FEF3C7", color="#D97706"];
+  classify [label="Workload classifier", fillcolor="#DCFCE7", color="#16A34A"];
+  io [label="Async I/O router", fillcolor="#DCFCE7", color="#16A34A"];
+  cpu [label="Bounded process pool", fillcolor="#DCFCE7", color="#16A34A"];
+  outcome [label="Response / structured\noverload error"];
+  request -> deadline -> limiter -> pressure -> classify;
+  classify -> io -> outcome;
+  classify -> cpu -> outcome;
+}

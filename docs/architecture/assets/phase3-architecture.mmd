@@ -1,0 +1,10 @@
+flowchart TB
+  S["PHASE 3 · IMPLEMENTED AND VERIFIED"]
+  C["Client + routing key"] --> H["SHA-256 consistent-hash ring"]
+  H --> N0["node-0"] & N1["node-1"] & N2["node-2"]
+  SEED["Static seed bootstrap"] -.-> N0
+  N0 <--> |"gossip + one-hop tasks"| N1
+  N1 <--> |"gossip + one-hop tasks"| N2
+  N2 <--> |"gossip + one-hop tasks"| N0
+  FD["SWIM-lite · PING · PING_REQ · SUSPECT · DEAD"] -.-> N0 & N1 & N2
+  S -.-> H

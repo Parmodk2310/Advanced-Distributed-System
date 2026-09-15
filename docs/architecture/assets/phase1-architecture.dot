@@ -1,0 +1,14 @@
+digraph Phase1 {
+  graph [rankdir=LR, bgcolor="transparent", label="PHASE 1 — IMPLEMENTED AND VERIFIED", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", color="#2563EB", fillcolor="#DBEAFE"];
+  edge [color="#475569", penwidth=1.6, arrowsize=0.8];
+  client [label="TaskClient"];
+  framing [label="Length-prefixed\nTCP framing"];
+  proto [label="Protobuf envelope\nvalidation"];
+  runtime [label="Async DistributedNode", fillcolor="#DCFCE7", color="#16A34A"];
+  router [label="TaskRouter", fillcolor="#DCFCE7", color="#16A34A"];
+  task [label="I/O task handler", fillcolor="#DCFCE7", color="#16A34A"];
+  config [label="Configuration +\nstructured logging", fillcolor="#F1F5F9", color="#64748B", style="rounded,filled,dashed"];
+  client -> framing -> proto -> runtime -> router -> task -> client [label=" response", fontsize=9];
+  config -> runtime [style=dashed, arrowhead=none];
+}

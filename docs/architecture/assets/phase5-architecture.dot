@@ -1,0 +1,20 @@
+digraph Phase5 {
+  graph [rankdir=TB, bgcolor="transparent", label="PHASE 5 — IMPLEMENTED AND VERIFIED", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", color="#7C3AED", fillcolor="#EDE9FE"];
+  edge [color="#475569", penwidth=1.5];
+  mutation [label="Validated mutation", fillcolor="#DBEAFE", color="#2563EB"];
+  admission [label="Persistence admission", fillcolor="#FEF3C7", color="#D97706"];
+  stage [label="Staged causal + CRDT state"];
+  sqlite [label="SQLite WAL transaction"];
+  memory [label="Install in memory"];
+  replicate [label="Async replication"];
+  ack [label="ACK · local durability", fillcolor="#DCFCE7", color="#16A34A"];
+  restore [label="Restart restore"];
+  reconcile [label="Replica reconciliation", fillcolor="#FEF3C7", color="#D97706"];
+  ready [label="READY", fillcolor="#DCFCE7", color="#16A34A"];
+  etcd [label="etcd discovery + TTL leases", fillcolor="#F1F5F9", color="#64748B"];
+  tls [label="TLS 1.3 + mTLS identity", fillcolor="#FEF3C7", color="#D97706"];
+  mutation -> admission -> stage -> sqlite -> memory -> replicate -> ack;
+  sqlite -> restore -> reconcile -> ready;
+  etcd -> reconcile [style=dashed]; tls -> replicate [style=dashed];
+}

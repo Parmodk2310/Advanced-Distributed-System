@@ -1,6 +1,6 @@
 digraph phase6 {
   rankdir=LR;
-  graph [label="Phase 6 — Observability, Chaos and Performance", labelloc=t, fontsize=22, fontname="DejaVu Sans", pad=0.3, nodesep=0.45, ranksep=0.7];
+  graph [label="Phase 6 — Observability, Chaos and Performance — IMPLEMENTED AND VERIFIED", labelloc=t, fontsize=22, fontname="DejaVu Sans", pad=0.3, nodesep=0.45, ranksep=0.7];
   node [shape=box, style="rounded", fontname="DejaVu Sans", fontsize=11, margin="0.12,0.08"];
   edge [fontname="DejaVu Sans", fontsize=9];
 
@@ -29,3 +29,4 @@ digraph phase6 {
   proxy -> etcd [label="proxy :12379"];
   n0 -> storage; n1 -> storage; n2 -> storage;
 }
+

@@ -1,0 +1,8 @@
+flowchart TB
+  S["PHASE 5 · IMPLEMENTED AND VERIFIED"]
+  M["Validated mutation"] --> A["Persistence admission"] --> C["Staged causal + CRDT state"]
+  C --> DB["SQLite WAL transaction"] --> MEM["Install in memory"] --> R["Async replication"] --> ACK["ACK · local durability"]
+  DB --> REST["Restart restore"] --> REC["Stale-replica reconciliation"] --> READY["READY"]
+  ETCD["etcd discovery + TTL leases"] -.-> REC
+  TLS["TLS 1.3 + mTLS identity"] -.-> R
+  S -.-> DB

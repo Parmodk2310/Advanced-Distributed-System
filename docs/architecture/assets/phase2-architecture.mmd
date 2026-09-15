@@ -1,0 +1,7 @@
+flowchart LR
+  S["PHASE 2 · IMPLEMENTED AND VERIFIED"]
+  Q["Request"] --> D["One monotonic deadline"] --> L["Token-bucket rate limiter"]
+  L --> B["Bounded backpressure admission"] --> C["Workload classifier"]
+  C --> I["Async I/O TaskRouter"] --> O["Response or structured error"]
+  C --> P["Bounded ProcessPoolExecutor"] --> O
+  S -.-> C

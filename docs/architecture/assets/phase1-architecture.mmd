@@ -1,0 +1,7 @@
+flowchart LR
+  STATUS["PHASE 1 · IMPLEMENTED AND VERIFIED"]
+  C["TaskClient"] --> F["Length-prefixed TCP framing"]
+  F --> P["Protobuf envelope validation"] --> N["Async DistributedNode"]
+  N --> R["TaskRouter"] --> T["I/O task handler"] --> C
+  CFG["Configuration + structured logging"] -.-> N
+  STATUS -.-> N

@@ -1,0 +1,19 @@
+digraph Phase3 {
+  graph [rankdir=TB, bgcolor="transparent", label="PHASE 3 — IMPLEMENTED AND VERIFIED", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", fillcolor="#DCFCE7", color="#16A34A"];
+  edge [color="#475569", penwidth=1.5];
+  client [label="Client + routing key", fillcolor="#DBEAFE", color="#2563EB"];
+  ring [label="SHA-256 consistent-hash ring", fillcolor="#FEF3C7", color="#D97706"];
+  n0 [label="node-0"];
+  n1 [label="node-1"];
+  n2 [label="node-2"];
+  seed [label="Static seed bootstrap", fillcolor="#F1F5F9", color="#64748B"];
+  fd [label="SWIM-lite probes\nPING · PING_REQ", fillcolor="#FEF3C7", color="#D97706"];
+  client -> ring;
+  ring -> n0; ring -> n1; ring -> n2;
+  seed -> n0 [style=dashed];
+  n0 -> n1 [dir=both, label=" gossip / one-hop tasks"];
+  n1 -> n2 [dir=both, label=" gossip / one-hop tasks"];
+  n2 -> n0 [dir=both, label=" gossip / one-hop tasks"];
+  fd -> n0 [style=dashed]; fd -> n1 [style=dashed]; fd -> n2 [style=dashed];
+}

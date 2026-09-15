@@ -1,0 +1,16 @@
+digraph Phase4 {
+  graph [rankdir=LR, bgcolor="transparent", label="PHASE 4 — IMPLEMENTED AND VERIFIED", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", color="#7C3AED", fillcolor="#EDE9FE"];
+  edge [color="#475569", penwidth=1.5];
+  token [label="Client causal token", fillcolor="#DBEAFE", color="#2563EB"];
+  validate [label="Causal validation"];
+  dot [label="Dotted mutation identity"];
+  crdt [label="Local CRDT merge\nGCounter · PNCounter\nORSet · MVRegister"];
+  replicas [label="RF=3 replica selection"];
+  async [label="Async full-state replication"];
+  repair [label="Targeted causal repair", fillcolor="#FEF3C7", color="#D97706"];
+  entropy [label="Digest anti-entropy", fillcolor="#FEF3C7", color="#D97706"];
+  converge [label="Converged replicas"];
+  token -> validate -> dot -> crdt -> replicas -> async -> converge;
+  repair -> converge; entropy -> converge;
+}

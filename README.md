@@ -12,6 +12,15 @@ A seven-phase distributed-systems engineering project that evolves from a bounde
 
 ---
 
+## Architecture guide
+
+- [Phase 1–7 capability evolution](docs/architecture/phase1-7-evolution.md)
+- [Complete architecture index](docs/architecture/README.md)
+- [Current Phase 6 architecture](docs/architecture/phase6-observability-chaos-performance.md)
+- [Planned Phase 7 production target](docs/architecture/phase7-production-delivery.md)
+
+---
+
 ## Why this project exists
 
 Production AI/ML systems depend on much more than model inference.

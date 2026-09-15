@@ -1,4 +1,5 @@
 flowchart LR
+    STATUS["PHASE 6 · IMPLEMENTED AND VERIFIED"]
     Client["Smoke / benchmark client"] -->|"TLS 1.3 + mTLS"| Proxy["Toxiproxy peer paths"]
     Proxy --> N0["node-0\napp 18000 | obs 9100"]
     Proxy --> N1["node-1\napp 18001 | obs 9101"]

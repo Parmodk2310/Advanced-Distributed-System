@@ -1,0 +1,13 @@
+digraph Evolution {
+  graph [rankdir=TB, bgcolor="transparent", label="PHASE 1–7 CAPABILITY EVOLUTION", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", color="#16A34A", fillcolor="#DCFCE7"];
+  edge [color="#475569", penwidth=1.8];
+  p1 [label="P1 · Protocol\nIMPLEMENTED"];
+  p2 [label="P2 · Bounded execution\nIMPLEMENTED"];
+  p3 [label="P3 · Multi-node routing\nIMPLEMENTED"];
+  p4 [label="P4 · Causal replicated state\nIMPLEMENTED"];
+  p5 [label="P5 · Durable secure recovery\nIMPLEMENTED"];
+  p6 [label="P6 · Observable fault-tested runtime\nIMPLEMENTED"];
+  p7 [label="P7 · Production delivery\nPLANNED — NOT IMPLEMENTED", color="#64748B", fillcolor="#F1F5F9", style="rounded,filled,dashed"];
+  p1 -> p2 -> p3 -> p4 -> p5 -> p6 -> p7;
+}
