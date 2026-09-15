@@ -43,10 +43,7 @@ async def test_stopped_node_transitions_to_suspect_then_dead(
 
         await wait_until(not_alive, timeout_seconds=5.0)
 
-        assert all(
-            member.node_id != "node-1"
-            for member in service.ring.candidates("any-key")
-        )
+        assert all(member.node_id != "node-1" for member in service.ring.candidates("any-key"))
 
         await stop_task
 
