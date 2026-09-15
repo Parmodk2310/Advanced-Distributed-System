@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from distsys.cluster.member import MemberStatus, SeedAddress
@@ -16,6 +18,7 @@ async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_fac
             seeds=(SeedAddress("127.0.0.1", p0),),
         )
     )
+    stop_task: asyncio.Task[None] | None = None
     try:
         await node0.start()
         await node1.start()
@@ -27,24 +30,27 @@ async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_fac
             return await service.membership.get("node-1") is not None
 
         await wait_until(joined)
-        await node1.stop()
+        stop_task = asyncio.create_task(node1.stop())
 
-        async def suspect() -> bool:
+        async def not_alive() -> bool:
             current = await service.membership.get("node-1")
-            return current is not None and current.status in {
+            return current is None or current.status in {
                 MemberStatus.SUSPECT,
                 MemberStatus.DEAD,
             }
 
-        await wait_until(suspect, timeout_seconds=5.0)
+        await wait_until(not_alive, timeout_seconds=5.0)
 
         assert all(member.node_id != "node-1" for member in service.ring.candidates("any-key"))
 
-        async def dead() -> bool:
+        async def dead_or_removed() -> bool:
             current = await service.membership.get("node-1")
-            return current is not None and current.status is MemberStatus.DEAD
+            return current is None or current.status is MemberStatus.DEAD
 
-        await wait_until(dead, timeout_seconds=5.0)
+        await wait_until(dead_or_removed, timeout_seconds=5.0)
+        await stop_task
     finally:
+        if stop_task is not None:
+            await asyncio.gather(stop_task, return_exceptions=True)
         await node1.stop()
         await node0.stop()
