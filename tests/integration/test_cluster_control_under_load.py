@@ -47,7 +47,7 @@ async def test_ping_still_works_after_public_rate_limit_rejects_task(unused_tcp_
         ack = await service0.peer_client.ping(
             remote,
             await service0.membership.snapshot(),
-            timeout_seconds=0.2,
+            timeout_seconds=0.1,
         )
         assert ack.success is True
         assert ack.target_node_id == "node-1"
