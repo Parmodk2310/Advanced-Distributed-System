@@ -8,5 +8,8 @@ def test_release_gate_waits_for_circuit_breaker_recovery_before_benchmarks() -> 
     recovery_wait = script.index('sleep "$BREAKER_RECOVERY_WAIT_SECONDS"', chaos_end)
     task_benchmark = script.index("--workload task", recovery_wait)
 
-    assert 'BREAKER_RECOVERY_WAIT_SECONDS="${PHASE6_BREAKER_RECOVERY_WAIT_SECONDS:-11}"' in script
+    assert (
+        'BREAKER_RECOVERY_WAIT_SECONDS="${PHASE6_BREAKER_RECOVERY_WAIT_SECONDS:-11}"'
+        in script
+    )
     assert chaos_end < recovery_wait < task_benchmark
