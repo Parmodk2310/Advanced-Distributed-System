@@ -31,3 +31,6 @@ data/*.db-shm
 benchmark-results/
 .phase6-logs/
 .phase6-runtime/
+
+# Phase 7 generated local state
+.phase7/
