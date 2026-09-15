@@ -1,0 +1,17 @@
+name: Phase 7 Base Image Digest Probe
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve official Python base digest
+        run: docker buildx imagetools inspect python:3.12-slim
