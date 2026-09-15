@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import signal
 import time
 from collections.abc import Awaitable, Callable
 
@@ -15,7 +13,6 @@ from distsys.chaos.safety import (
     ManagedManifest,
     require_chaos_opt_in,
     validate_duration,
-    validate_pid,
 )
 from distsys.chaos.toxiproxy import ToxiproxyClient
 
@@ -32,33 +29,25 @@ class ChaosController:
         "deploy/monitoring/docker-compose.yml",
     )
     SCENARIOS = frozenset({"node-kill", "network-delay", "partition", "etcd-outage"})
+    NODE_SERVICES = frozenset({"node-0", "node-1", "node-2"})
 
     def __init__(self, manifest: ManagedManifest, toxiproxy: ToxiproxyClient, probe: Probe) -> None:
         self.manifest = manifest
         self.toxiproxy = toxiproxy
         self.probe = probe
 
-    async def _restart_managed(self, target: str) -> None:
-        process = self.manifest.pids.get(target)
-        if process is None or not process.restart_argv:
-            raise ValueError(f"managed node {target} has no restart command")
-        argv = process.restart_argv
-        if (
-            len(argv) < 3
-            or argv[0] != "bash"
-            or argv[1] != "scripts/phase6_start_node.sh"
-            or argv[2] != target
-        ):
-            raise ValueError("restart command is outside the Phase 6 managed launcher")
-        proc = await asyncio.create_subprocess_exec(*argv)
-        if await proc.wait() != 0:
-            raise RuntimeError(f"managed restart failed for {target}")
-
     async def _compose(self, *args: str) -> None:
         proc = await asyncio.create_subprocess_exec(*self.COMPOSE, *args)
         code = await proc.wait()
         if code != 0:
             raise RuntimeError(f"scoped docker compose command failed: {args}")
+
+    async def _compose_node(self, action: str, target: str) -> None:
+        if action not in {"kill", "start"}:
+            raise ValueError(f"unsupported node lifecycle action: {action}")
+        if target not in self.NODE_SERVICES or not self.manifest.has_service(target):
+            raise ValueError(f"{target} is not a managed Phase 6 node service")
+        await self._compose(action, target)
 
     async def _await_state(
         self,
@@ -180,12 +169,13 @@ class ChaosController:
 
                 else:
                     expected = "one managed node stops, two-node service continuity is preserved, then the node restarts"
-                    process = self.manifest.pids.get(target)
-                    if process is None:
-                        raise ValueError(f"unknown managed node: {target}")
-                    validate_pid(process.pid, self.manifest)
-                    cleanup.push(lambda: self._restart_managed(target))
-                    os.kill(process.pid, signal.SIGKILL)
+                    if target not in self.NODE_SERVICES or not self.manifest.has_service(target):
+                        raise ValueError(f"{target} is not a managed Phase 6 node service")
+
+                    cleanup.push(lambda: self._compose_node("start", target))
+
+                    await self._compose_node("kill", target)
+
                     degraded = await self._await_state(
                         lambda s: s.data_plane_ok
                         and target not in s.ready_nodes
@@ -194,10 +184,13 @@ class ChaosController:
                         timeout_seconds=8.0,
                         description="managed node termination with remaining service continuity",
                     )
+
                     observations["degraded"] = degraded.to_dict()
                     recovery_started = time.perf_counter()
+
                     await asyncio.sleep(0.25)
-                    await self._restart_managed(target)
+                    await self._compose_node("start", target)
+
                     recovered = await self._await_state(
                         lambda s: s.data_plane_ok
                         and target in s.ready_nodes

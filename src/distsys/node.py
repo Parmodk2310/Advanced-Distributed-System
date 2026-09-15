@@ -8,6 +8,7 @@ import ssl
 import time
 from typing import Any
 
+from distsys import __version__
 from distsys.cluster.cluster_router import (
     LocalOverloadedError,
     PeerUnavailableError,
@@ -220,7 +221,7 @@ class DistributedNode:
                         port=self.bound_port,
                         membership_incarnation=membership_incarnation,
                         protocol_version=5,
-                        release="0.5.0",
+                        release=__version__,
                         tls_required=self.settings.tls_enabled,
                     )
                     bootstrap_seeds = await self.coordination_service.bootstrap(coordination_member)

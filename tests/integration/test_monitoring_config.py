@@ -23,10 +23,12 @@ def test_prometheus_targets_and_grafana_provisioning_are_complete():
     prometheus = yaml.safe_load((ROOT / "deploy/monitoring/prometheus/prometheus.yml").read_text())
     targets = prometheus["scrape_configs"][0]["static_configs"][0]["targets"]
     assert targets == [
-        "host.docker.internal:9100",
-        "host.docker.internal:9101",
-        "host.docker.internal:9102",
+        "node-0:9100",
+        "node-1:9101",
+        "node-2:9102",
     ]
+
+    assert all("host.docker.internal" not in target for target in targets)
     datasources = yaml.safe_load(
         (ROOT / "deploy/monitoring/grafana/provisioning/datasources/datasources.yml").read_text()
     )["datasources"]

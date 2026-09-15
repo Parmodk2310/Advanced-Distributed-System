@@ -7,9 +7,9 @@ from distsys.chaos.toxiproxy import ToxiproxyClient
 
 PROXIES = {
     "etcd": ("0.0.0.0:12379", "etcd:2379"),
-    "peer-node-0": ("0.0.0.0:19100", "host.docker.internal:18000"),
-    "peer-node-1": ("0.0.0.0:19101", "host.docker.internal:18001"),
-    "peer-node-2": ("0.0.0.0:19102", "host.docker.internal:18002"),
+    "peer-node-0": ("0.0.0.0:19100", "node-0:18000"),
+    "peer-node-1": ("0.0.0.0:19101", "node-1:18001"),
+    "peer-node-2": ("0.0.0.0:19102", "node-2:18002"),
 }
 
 

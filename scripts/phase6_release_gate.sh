@@ -49,7 +49,8 @@ wait_for_ready() {
         >/dev/null 2>&1 || all=0
     done
 
-    if [[ "$all" == "1" ]]; then
+    if [[ "$all" == "1" ]] &&
+       [[ -f "$CURRENT_LOG_DIR/manifest.json" ]]; then
       return 0
     fi
 
