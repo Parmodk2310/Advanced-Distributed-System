@@ -35,12 +35,21 @@ async def test_restarted_node_with_newer_incarnation_rejoins(unused_tcp_port_fac
         old_incarnation = original.incarnation
         stop_task = asyncio.create_task(node1.stop())
 
+        async def not_alive() -> bool:
+            current = await service.membership.get("node-1")
+            return current is None or current.status in {
+                MemberStatus.SUSPECT,
+                MemberStatus.DEAD,
+            }
+
+        await wait_until(not_alive, timeout_seconds=5.0)
+        await stop_task
+
         async def dead_or_removed() -> bool:
             current = await service.membership.get("node-1")
             return current is None or current.status is MemberStatus.DEAD
 
         await wait_until(dead_or_removed, timeout_seconds=5.0)
-        await stop_task
 
         restarted = DistributedNode(
             cluster_settings(
