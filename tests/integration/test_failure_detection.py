@@ -49,6 +49,7 @@ async def test_stopped_node_transitions_to_suspect_then_dead(unused_tcp_port_fac
         await stop_task
 
         async def dead_or_removed() -> bool:
+            await service.membership.advance_timeouts_and_purge()
             current = await service.membership.get("node-1")
             return current is None or current.status is MemberStatus.DEAD
 
