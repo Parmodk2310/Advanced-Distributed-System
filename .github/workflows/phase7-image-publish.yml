@@ -127,7 +127,7 @@ jobs:
           docker run --rm --entrypoint python "$IMAGE" -c 'import distsys; print("import-ok")'
 
       - name: Scan image for high-severity vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: distsys-node:phase7-${{ github.sha }}
           severity: HIGH,CRITICAL
