@@ -16,3 +16,24 @@ Sequence:
 9. Require `aws-teardown.json` to report zero unexpected tagged resources.
 
 The demo uses one worker by default. Three etcd members on that worker are not node/AZ-level HA.
+
+## GitHub runner access to the EKS API
+
+`PHASE7_API_CIDRS_JSON` is the permanent allowlist for the EKS public
+API endpoint. It must contain only explicitly approved CIDRs and must
+never contain `0.0.0.0/0`.
+
+The deployment role requires `eks:UpdateClusterConfig`. During an
+approved deployment or teardown, the workflow discovers the
+GitHub-hosted runner IPv4 address as a /32, temporarily merges it with
+`PHASE7_API_CIDRS_JSON`, and waits for the EKS configuration update
+before using `kubectl` or Helm.
+
+The workflow never makes the Kubernetes API generally public. Its
+`always` cleanup path always restores the exact CIDRs supplied through
+`PHASE7_API_CIDRS_JSON`. If Kubernetes access cannot be established
+during teardown, Helm and PVC cleanup are skipped and Terraform
+destruction continues so that EKS does not remain billable.
+
+After every run, confirm that the cluster either no longer exists or
+its `publicAccessCidrs` exactly match `PHASE7_API_CIDRS_JSON`.

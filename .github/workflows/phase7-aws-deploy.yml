@@ -83,10 +83,91 @@ jobs:
       - name: Apply exactly the reviewed plan
         if: inputs.action == 'apply-demo'
         run: terraform -chdir=deploy/terraform/aws apply -input=false "$GITHUB_WORKSPACE/.phase7/reviewed/phase7.tfplan"
-      - name: Configure kubeconfig
+      - name: Temporarily authorize GitHub runner for EKS API
+        id: eks_api_access
+        env:
+          ACTION: ${{ inputs.action }}
+          CHECK_IP_HOST: checkip.amazonaws.com
         run: |
-          cluster="$(terraform -chdir=deploy/terraform/aws output -raw cluster_name 2>/dev/null || true)"
-          if [[ -n "$cluster" && "$cluster" != "null" ]]; then aws eks update-kubeconfig --region ap-south-1 --name "$cluster"; fi
+          cluster="$(
+            terraform -chdir=deploy/terraform/aws output -json 2>/dev/null |
+            jq -r '.cluster_name.value // empty' || true
+          )"
+
+          if [[ -z "$cluster" ]]; then
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+
+            if [[ "$ACTION" == "destroy" ]]; then
+              echo "No Terraform cluster output; Kubernetes cleanup will be skipped"
+              exit 0
+            fi
+
+            echo "No EKS cluster output during apply-demo" >&2
+            exit 1
+          fi
+
+          runner_ip="$(curl -4 --fail --silent "https://${CHECK_IP_HOST}")"
+          [[ "$runner_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]
+          runner_cidr="${runner_ip}/32"
+
+          approved_cidrs="$(
+            jq -ce '
+              if type == "array"
+                 and length > 0
+                 and all(.[]; type == "string")
+                 and index("0.0.0.0/0") == null
+              then .
+              else error("invalid approved EKS API CIDRs")
+              end
+            ' <<< "$TF_VAR_kubernetes_api_cidrs"
+          )"
+
+          temporary_cidrs="$(
+            jq -cn \
+              --argjson approved "$approved_cidrs" \
+              --arg runner "$runner_cidr" \
+              '$approved + [$runner] | unique'
+          )"
+
+          mkdir -p .phase7
+          printf '%s' "$cluster" > .phase7/eks-cluster-name
+          printf '%s' "$approved_cidrs" > .phase7/approved-api-cidrs.json
+
+          vpc_config="$(
+            jq -cn \
+              --argjson cidrs "$temporary_cidrs" \
+              '{
+                endpointPrivateAccess: true,
+                endpointPublicAccess: true,
+                publicAccessCidrs: $cidrs
+              }'
+          )"
+
+          if ! aws eks update-cluster-config \
+            --region ap-south-1 \
+            --name "$cluster" \
+            --resources-vpc-config "$vpc_config"
+          then
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+            if [[ "$ACTION" == "destroy" ]]; then
+              echo "Runner authorization failed; continuing to Terraform destroy"
+              exit 0
+            fi
+            exit 1
+          fi
+
+          aws eks wait cluster-active \
+            --region ap-south-1 \
+            --name "$cluster"
+
+          echo "cluster=$cluster" >> "$GITHUB_OUTPUT"
+          echo "authorized=true" >> "$GITHUB_OUTPUT"
+      - name: Configure kubeconfig
+        if: steps.eks_api_access.outputs.authorized == 'true'
+        run: |
+          aws eks update-kubeconfig \
+            --region ap-south-1 \
+            --name "${{ steps.eks_api_access.outputs.cluster }}"
       - name: Promote exact GHCR artifact into ECR without rebuilding
         if: inputs.action == 'apply-demo'
         env:
@@ -127,17 +208,66 @@ jobs:
           test -n "${host:-}"
           PYTHONPATH=src python scripts/phase7/verify_public_endpoint.py --host "$host" --output .phase7/evidence/eks-public.json
       - name: Always remove temporary external endpoint
-        if: always() && inputs.action == 'apply-demo'
+        if: always() && inputs.action == 'apply-demo' && steps.eks_api_access.outputs.authorized == 'true'
         run: bash scripts/phase7/disable_public_endpoint.sh
       - name: Destroy application, etcd and AWS infrastructure
-        if: inputs.action == 'destroy'
+        if: always() && inputs.action == 'destroy'
+        env:
+          KUBERNETES_ACCESS_READY: ${{ steps.eks_api_access.outputs.authorized }}
         run: |
-          bash scripts/phase7/disable_public_endpoint.sh || true
-          helm -n distsys uninstall phase7 --wait --timeout 5m || true
-          helm -n distsys uninstall phase7-etcd --wait --timeout 5m || true
-          kubectl -n distsys delete pvc --all --wait=true --timeout=5m || true
+          if [[ "$KUBERNETES_ACCESS_READY" == "true" ]]; then
+            bash scripts/phase7/disable_public_endpoint.sh || true
+            helm -n distsys uninstall phase7 --wait --timeout 5m || true
+            helm -n distsys uninstall phase7-etcd --wait --timeout 5m || true
+            kubectl -n distsys delete pvc --all --wait=true --timeout=5m || true
+          else
+            echo "Kubernetes API unavailable; continuing directly to Terraform destroy"
+          fi
           terraform -chdir=deploy/terraform/aws destroy -input=false -auto-approve
           bash scripts/phase7/verify_aws_teardown.sh > .phase7/evidence/aws-teardown.json
+      - name: Always restore approved EKS API CIDRs
+        if: always()
+        run: |
+          cluster_file=".phase7/eks-cluster-name"
+          cidrs_file=".phase7/approved-api-cidrs.json"
+
+          if [[ ! -s "$cluster_file" || ! -s "$cidrs_file" ]]; then
+            echo "Temporary EKS API authorization was not established"
+            exit 0
+          fi
+
+          cluster="$(cat "$cluster_file")"
+          approved_cidrs="$(cat "$cidrs_file")"
+
+          if ! aws eks describe-cluster \
+            --region ap-south-1 \
+            --name "$cluster" \
+            >/dev/null 2>&1
+          then
+            echo "EKS cluster no longer exists; no CIDR restoration required"
+            exit 0
+          fi
+
+          echo "Restore approved EKS API CIDRs"
+
+          vpc_config="$(
+            jq -cn \
+              --argjson cidrs "$approved_cidrs" \
+              '{
+                endpointPrivateAccess: true,
+                endpointPublicAccess: true,
+                publicAccessCidrs: $cidrs
+              }'
+          )"
+
+          aws eks update-cluster-config \
+            --region ap-south-1 \
+            --name "$cluster" \
+            --resources-vpc-config "$vpc_config"
+
+          aws eks wait cluster-active \
+            --region ap-south-1 \
+            --name "$cluster"
       - name: Upload sanitized evidence
         if: always()
         uses: actions/upload-artifact@v4
