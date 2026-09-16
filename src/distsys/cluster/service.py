@@ -51,7 +51,7 @@ class ClusterService:
         )
         self.local_member = ClusterMember(
             node_id=settings.node_id,
-            host=settings.host,
+            host=settings.advertise_host or settings.host,
             port=bound_port,
             status=MemberStatus.ALIVE,
             incarnation=incarnation or fresh_incarnation(),

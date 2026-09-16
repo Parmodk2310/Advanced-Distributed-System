@@ -37,6 +37,7 @@ def _env_endpoints(name: str, default: str) -> tuple[str, ...]:
 class Settings:
     node_id: str = "node-0"
     host: str = "127.0.0.1"
+    advertise_host: str = ""
     port: int = 8000
     max_frame_size: int = DEFAULT_MAX_FRAME_SIZE
     request_timeout_seconds: float = 5.0
@@ -195,6 +196,7 @@ class Settings:
         return cls(
             node_id=os.getenv("NODE_ID", "node-0"),
             host=os.getenv("NODE_HOST", "127.0.0.1"),
+            advertise_host=os.getenv("NODE_ADVERTISE_HOST", ""),
             port=int(os.getenv("NODE_PORT", "8000")),
             max_frame_size=int(os.getenv("MAX_FRAME_SIZE", str(DEFAULT_MAX_FRAME_SIZE))),
             request_timeout_seconds=float(os.getenv("REQUEST_TIMEOUT_SECONDS", "5.0")),

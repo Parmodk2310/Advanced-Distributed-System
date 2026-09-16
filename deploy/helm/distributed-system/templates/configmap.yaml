@@ -6,6 +6,7 @@ metadata:
   labels:
     {{- include "distributed-system.labels" . | nindent 4 }}
 data:
+  NODE_HOST: "0.0.0.0"
   NODE_PORT: {{ .Values.service.protocolPort | quote }}
   CLUSTER_ENABLED: "true"
   CLUSTER_SEEDS: {{ printf "%s-0.%s-headless:%d,%s-1.%s-headless:%d,%s-2.%s-headless:%d" (include "distributed-system.fullname" .) (include "distributed-system.fullname" .) (int .Values.service.protocolPort) (include "distributed-system.fullname" .) (include "distributed-system.fullname" .) (int .Values.service.protocolPort) (include "distributed-system.fullname" .) (include "distributed-system.fullname" .) (int .Values.service.protocolPort) | quote }}

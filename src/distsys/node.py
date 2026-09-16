@@ -217,7 +217,7 @@ class DistributedNode:
                     coordination_member = CoordinationMember(
                         node_id=self.settings.node_id,
                         node_uuid=str(restored.identity.node_uuid),
-                        host=self.settings.host,
+                        host=self.settings.advertise_host or self.settings.host,
                         port=self.bound_port,
                         membership_incarnation=membership_incarnation,
                         protocol_version=5,

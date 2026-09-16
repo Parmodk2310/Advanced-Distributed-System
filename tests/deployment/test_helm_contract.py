@@ -111,10 +111,10 @@ def test_runtime_configuration_matches_existing_environment_contract() -> None:
         "OTEL_EXPORTER_OTLP_ENDPOINT",
     ):
         assert variable in configmap
-    assert "- name: NODE_HOST" in statefulset
+    assert "- name: NODE_ADVERTISE_HOST" in statefulset
     assert 'value: "$(NODE_ID).' in statefulset
     assert '-headless"' in statefulset
-    assert 'NODE_HOST: "0.0.0.0"' not in configmap
+    assert 'NODE_HOST: "0.0.0.0"' in configmap
 
 
 def test_chart_never_renders_private_key_material() -> None:
