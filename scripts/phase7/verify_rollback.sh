@@ -17,7 +17,13 @@ if helm upgrade "$PHASE7_RELEASE" "$(phase7_chart_dir)" \
 fi
 
 helm rollback "$PHASE7_RELEASE" "$revision" \
-  --namespace "$PHASE7_NAMESPACE" --wait --timeout "$PHASE7_HELM_TIMEOUT"
+  --namespace "$PHASE7_NAMESPACE" --timeout "$PHASE7_HELM_TIMEOUT"
+# StatefulSet rollbacks do not automatically recreate a pod already created
+# from the bad revision. The unhealthy upgrade starts at the highest ordinal.
+kubectl -n "$PHASE7_NAMESPACE" delete \
+  "pod/$PHASE7_RELEASE-distributed-system-2" --wait=false
+kubectl -n "$PHASE7_NAMESPACE" rollout status \
+  "statefulset/$PHASE7_RELEASE-distributed-system" --timeout="$PHASE7_HELM_TIMEOUT"
 PYTHONPATH="$PHASE7_REPO_ROOT/src" python "$PHASE7_SCRIPT_DIR/verify_cluster.py" \
   --namespace "$PHASE7_NAMESPACE" --release "$PHASE7_RELEASE" \
   --work-dir "$PHASE7_WORK_DIR" \

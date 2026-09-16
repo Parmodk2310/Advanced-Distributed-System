@@ -26,4 +26,6 @@ def test_rollback_is_fail_closed_and_reverifies() -> None:
     assert "set -euo pipefail" in text
     assert "expected deliberately unhealthy upgrade to fail" in text
     assert "helm rollback" in text
+    assert "pod/$PHASE7_RELEASE-distributed-system-2" in text
+    assert "rollout status" in text
     assert "verify_cluster.py" in text
