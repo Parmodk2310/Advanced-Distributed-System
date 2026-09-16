@@ -64,8 +64,13 @@ class PortForward:
 
     async def __aenter__(self) -> Self:
         self.process = await asyncio.to_thread(self._start)
-        for mapping in self.mappings:
-            await asyncio.to_thread(wait_port, int(mapping.split(":", 1)[0]))
+        # A raw TCP readiness probe can make kubectl tear down a forwarding
+        # stream before an application protocol request is sent. Give kubectl
+        # a bounded startup window and let the real HTTP/client checks retry.
+        await asyncio.sleep(1.0)
+        if self.process.poll() is not None:
+            detail = self.process.stderr.read().strip()[:2000] if self.process.stderr else ""
+            raise RuntimeError(f"kubectl port-forward exited early: {detail}")
         return self
 
     async def __aexit__(self, *_: object) -> None:
