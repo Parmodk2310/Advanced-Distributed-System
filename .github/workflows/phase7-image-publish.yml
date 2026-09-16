@@ -84,7 +84,7 @@ jobs:
 
       - name: Validate Helm release contract
         run: |
-          mkdir -p .phase7/rendered
+          mkdir -p .phase7/rendered .phase7/evidence
           helm lint deploy/helm/distributed-system \
             --values deploy/helm/distributed-system/values-kind.yaml
           helm template phase7 deploy/helm/distributed-system \
