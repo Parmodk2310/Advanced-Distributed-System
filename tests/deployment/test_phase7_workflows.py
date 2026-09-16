@@ -29,6 +29,16 @@ def test_image_workflow_scans_sbom_signs_and_publishes_digest():
     assert "image.tag=latest" not in t
 
 
+def test_image_workflow_fetches_full_history_before_gitleaks() -> None:
+    text = read(".github/workflows/phase7-image-publish.yml")
+
+    assert """      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+""" in text
+
+
 def test_aws_plan_is_manual_oidc_and_saved_plan():
     t = read(".github/workflows/phase7-aws-plan.yml")
     assert "workflow_dispatch" in t
