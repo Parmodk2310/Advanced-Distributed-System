@@ -1,6 +1,6 @@
 resource "aws_budgets_budget" "phase7" {
-  name        = "${local.name}-monthly"
-  budget_type = "COST"
+  name         = "${local.name}-monthly"
+  budget_type  = "COST"
   limit_amount = tostring(var.monthly_budget_usd)
   limit_unit   = "USD"
   time_unit    = "MONTHLY"

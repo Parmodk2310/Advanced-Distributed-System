@@ -8,7 +8,7 @@ resource "aws_eks_cluster" "this" {
     subnet_ids              = aws_subnet.public[*].id
     endpoint_private_access = true
     endpoint_public_access  = true
-    public_access_cidrs      = var.kubernetes_api_cidrs
+    public_access_cidrs     = var.kubernetes_api_cidrs
   }
 
   encryption_config {
