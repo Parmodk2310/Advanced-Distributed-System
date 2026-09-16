@@ -35,6 +35,13 @@ def test_runtime_uses_non_root_identity_and_expected_entrypoint() -> None:
     assert "COPY src" not in runtime_stage
 
 
+def test_runtime_applies_available_base_os_security_updates() -> None:
+    runtime_stage = _dockerfile().split(" AS runtime", maxsplit=1)[1]
+    assert "apt-get update" in runtime_stage
+    assert "apt-get upgrade -y" in runtime_stage
+    assert "rm -rf /var/lib/apt/lists/*" in runtime_stage
+
+
 def test_runtime_has_only_explicit_writable_paths() -> None:
     dockerfile = _dockerfile()
 

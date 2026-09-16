@@ -19,7 +19,10 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     TMPDIR=/tmp
 
-RUN groupadd --gid 10001 distsys \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 distsys \
     && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin distsys \
     && mkdir -p /data /tmp /wheelhouse \
     && chown -R 10001:10001 /data /tmp
