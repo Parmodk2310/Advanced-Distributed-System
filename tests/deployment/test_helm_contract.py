@@ -112,7 +112,8 @@ def test_runtime_configuration_matches_existing_environment_contract() -> None:
     ):
         assert variable in configmap
     assert "- name: NODE_HOST" in statefulset
-    assert "fieldPath: metadata.name" in statefulset
+    assert 'value: "$(NODE_ID).' in statefulset
+    assert '-headless"' in statefulset
     assert 'NODE_HOST: "0.0.0.0"' not in configmap
 
 

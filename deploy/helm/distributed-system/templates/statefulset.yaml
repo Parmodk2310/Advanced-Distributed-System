@@ -75,9 +75,7 @@ spec:
             # The runtime uses one address for binding and peer advertisement.
             # A pod-specific DNS name is both bindable and routable, unlike 0.0.0.0.
             - name: NODE_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
+              value: "$(NODE_ID).{{ include "distributed-system.fullname" . }}-headless"
             - name: OTEL_SERVICE_NAME
               valueFrom:
                 fieldRef:
