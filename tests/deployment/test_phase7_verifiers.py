@@ -9,6 +9,7 @@ def test_cluster_verifier_is_bounded_and_checks_security() -> None:
     assert "forwarded endpoint did not become ready" in text
     assert "ready != 3" in text
     assert "mTLS connection without a client identity" in text
+    assert 'client_id="phase7-client"' in text
     assert '"crdt_convergence": "pass"' in text
 
 

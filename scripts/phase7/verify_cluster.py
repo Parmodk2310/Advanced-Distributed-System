@@ -157,6 +157,7 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, Any]
         key = f"phase7.verify.{time.time_ns()}"
         writer = CrdtClient(
             port=18000,
+            client_id="phase7-client",
             timeout_seconds=5,
             ssl_context=context,
             server_hostname=pod0,
@@ -164,6 +165,7 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, Any]
         written = await writer.increment(key, amount=2)
         reader = CrdtClient(
             port=18002,
+            client_id="phase7-client",
             timeout_seconds=5,
             ssl_context=context,
             server_hostname=pod2,
@@ -180,6 +182,7 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, Any]
         try:
             await CrdtClient(
                 port=18000,
+                client_id="phase7-client",
                 timeout_seconds=2,
                 ssl_context=no_identity,
                 server_hostname=pod0,

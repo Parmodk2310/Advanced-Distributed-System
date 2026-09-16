@@ -20,6 +20,7 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, obje
     async with PortForward(namespace, pod, ("18002:8000",)):
         client = CrdtClient(
             port=18002,
+            client_id="phase7-client",
             timeout_seconds=5,
             ssl_context=tls_context(work_dir),
             server_hostname=pod,
@@ -53,6 +54,7 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, obje
     async with PortForward(namespace, pod, ("18002:8000",)):
         client = CrdtClient(
             port=18002,
+            client_id="phase7-client",
             timeout_seconds=5,
             ssl_context=tls_context(work_dir),
             server_hostname=pod,
