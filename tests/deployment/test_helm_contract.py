@@ -95,9 +95,9 @@ def test_chart_defines_internal_services_pdb_and_network_boundaries() -> None:
 
 def test_runtime_configuration_matches_existing_environment_contract() -> None:
     configmap = _read("templates/configmap.yaml")
+    statefulset = _read("templates/statefulset.yaml")
 
     for variable in (
-        "NODE_HOST",
         "NODE_PORT",
         "CLUSTER_SEEDS",
         "CRDT_REPLICATION_FACTOR",
@@ -110,6 +110,9 @@ def test_runtime_configuration_matches_existing_environment_contract() -> None:
         "OTEL_EXPORTER_OTLP_ENDPOINT",
     ):
         assert variable in configmap
+    assert "- name: NODE_HOST" in statefulset
+    assert "fieldPath: metadata.name" in statefulset
+    assert 'NODE_HOST: "0.0.0.0"' not in configmap
 
 
 def test_chart_never_renders_private_key_material() -> None:
