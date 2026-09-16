@@ -34,6 +34,8 @@ def test_image_workflow_enforces_supply_chain_controls() -> None:
     assert "aquasecurity/trivy-action" in text
     assert "anchore/sbom-action" in text
     assert "actions/attest-build-provenance" in text
+    assert "github.event.repository.visibility == 'public'" in text
+    assert "provenance.json" in text
     assert "ghcr.io/parmodk2310/distsys-node" in text
     assert "kubeconform" in text and "conftest" in text
 

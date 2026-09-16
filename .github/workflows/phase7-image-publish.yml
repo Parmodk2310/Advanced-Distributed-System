@@ -169,12 +169,37 @@ jobs:
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       - name: Attest published image provenance
-        if: steps.publish.outputs.digest != ''
+        if: steps.publish.outputs.digest != '' && github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/parmodk2310/distsys-node
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
+
+      - name: Record private-repository provenance metadata
+        if: steps.publish.outputs.digest != '' && github.event.repository.visibility != 'public'
+        env:
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+          IMAGE_NAME: ghcr.io/parmodk2310/distsys-node
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = {
+              "builder": "github-actions/phase7-image-publish",
+              "image": os.environ["IMAGE_NAME"],
+              "manifest_digest": os.environ["IMAGE_DIGEST"],
+              "source_commit": os.environ["SOURCE_COMMIT"],
+              "native_attestation": "unavailable-for-user-owned-private-repository",
+          }
+          Path(".phase7/evidence/provenance.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
 
       - name: Upload SBOM and release evidence
         if: always()

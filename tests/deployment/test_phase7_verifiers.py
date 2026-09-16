@@ -17,6 +17,7 @@ def test_persistence_verifier_restarts_pod_and_uses_causal_token() -> None:
     text = (ROOT / "scripts/phase7/verify_persistence.py").read_text()
     assert '"delete", "pod"' in text
     assert '"--for=condition=Ready"' in text
+    assert "replacement pod did not appear" in text
     assert "causal_token=written.causal_token" in text
     assert "persistent value mismatch" in text
 

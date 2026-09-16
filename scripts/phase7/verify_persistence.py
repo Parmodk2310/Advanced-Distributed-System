@@ -40,6 +40,14 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, obje
     if not pvc:
         raise AssertionError("pod does not have a data PVC")
     run("kubectl", "-n", namespace, "delete", "pod", pod, "--wait=true", timeout=60)
+    for _ in range(60):
+        try:
+            run("kubectl", "-n", namespace, "get", "pod", pod, timeout=5)
+            break
+        except RuntimeError:
+            await asyncio.sleep(1)
+    else:
+        raise AssertionError("replacement pod did not appear within 60 seconds")
     run(
         "kubectl",
         "-n",
