@@ -4,27 +4,54 @@ on:
 permissions:
   contents: read
   id-token: write
-concurrency: {group: phase7-aws-plan, cancel-in-progress: false}
+concurrency:
+  group: phase7-aws-plan
+  cancel-in-progress: false
 jobs:
   plan:
     if: vars.AWS_PHASE7_ENABLED == 'true'
     environment: phase7-aws-demo
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_VAR_owner: ${{ vars.PHASE7_OWNER }}
+      TF_VAR_expires_at: ${{ vars.PHASE7_EXPIRES_AT }}
+      TF_VAR_budget_email: ${{ secrets.PHASE7_BUDGET_EMAIL }}
+      TF_VAR_kubernetes_api_cidrs: ${{ vars.PHASE7_API_CIDRS_JSON }}
+      TF_VAR_enable_eks: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with: {role-to-assume: "${{ vars.AWS_ROLE_ARN }}", aws-region: ap-south-1}
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.9.8}
-      - run: terraform -chdir=deploy/terraform/aws init -input=false
-      - run: terraform -chdir=deploy/terraform/aws plan -input=false -out=phase7.tfplan -var=enable_eks=true
-      - run: terraform -chdir=deploy/terraform/aws show -no-color phase7.tfplan > phase7-plan.txt && sha256sum deploy/terraform/aws/phase7.tfplan > phase7-plan.sha256
+      - name: Build protected backend configuration
+        run: |
+          mkdir -p .phase7
+          chmod 700 .phase7
+          cat > .phase7/backend.hcl <<EOF
+          bucket = "${{ vars.TF_STATE_BUCKET }}"
+          key = "advanced-distributed-system/phase7.tfstate"
+          region = "ap-south-1"
+          encrypt = true
+          dynamodb_table = "${{ vars.TF_LOCK_TABLE }}"
+          EOF
+          chmod 600 .phase7/backend.hcl
+      - name: Init, validate and create reviewable plan
+        run: |
+          terraform -chdir=deploy/terraform/aws fmt -check -recursive
+          terraform -chdir=deploy/terraform/aws init -input=false -reconfigure -backend-config="$GITHUB_WORKSPACE/.phase7/backend.hcl"
+          terraform -chdir=deploy/terraform/aws validate
+          terraform -chdir=deploy/terraform/aws plan -input=false -out="$GITHUB_WORKSPACE/.phase7/phase7.tfplan"
+          terraform -chdir=deploy/terraform/aws show -no-color "$GITHUB_WORKSPACE/.phase7/phase7.tfplan" > .phase7/phase7-plan.txt
+          ! grep -q 'aws_nat_gateway' .phase7/phase7-plan.txt
+          (cd .phase7 && sha256sum phase7.tfplan > phase7-plan.sha256)
       - uses: actions/upload-artifact@v4
         with:
           name: "phase7-reviewed-plan-${{ github.sha }}"
           path: |
-            deploy/terraform/aws/phase7.tfplan
-            phase7-plan.txt
-            phase7-plan.sha256
+            .phase7/phase7.tfplan
+            .phase7/phase7-plan.txt
+            .phase7/phase7-plan.sha256
           retention-days: 3

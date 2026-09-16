@@ -1,0 +1,10 @@
+replicaCount: 3
+persistence:
+  storageClass: phase7-gp3
+  size: 2Gi
+storageClass:
+  create: true
+  name: phase7-gp3
+  provisioner: ebs.csi.aws.com
+  type: gp3
+  reclaimPolicy: Delete

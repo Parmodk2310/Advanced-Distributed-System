@@ -1,5 +1,7 @@
-# Phase 7 AWS infrastructure
+# Phase 7 AWS Terraform
 
-This module is safe by default: `enable_eks=false` creates the ECR repository and budget only. It never deploys Helm resources. The demonstration profile uses two public subnets, no NAT Gateway, and one on-demand `t3.medium` worker (`1/1/2` min/desired/max). This reduces cost but is not a production private-node topology.
+This module is inert until it is applied. `enable_eks=false` is the default. The Phase 7B workflow uses `enable_eks=true` only after an explicit approval gate.
 
-Copy `terraform.tfvars.example`, replace all placeholders, restrict the API CIDR to your current public `/32`, then run `terraform init -backend=false`, `terraform validate`, and `terraform plan`. Do not apply until the exact plan and estimated cost receive separate approval.
+A pre-existing S3 backend and DynamoDB lock table are required for cross-run plan/apply/destroy safety. Copy `backend.hcl.example` to a local untracked file or generate it from protected GitHub variables. Never commit backend credentials or state.
+
+The temporary EKS profile deliberately uses public worker subnets and no NAT Gateway to bound demo complexity/cost. It is not the recommended permanent production topology.

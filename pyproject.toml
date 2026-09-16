@@ -42,6 +42,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
   "etcd: requires RUN_ETCD_INTEGRATION=1 and a live local etcd service",
   "chaos: requires RUN_CHAOS_TESTS=1 and the dedicated Phase 6 stack",

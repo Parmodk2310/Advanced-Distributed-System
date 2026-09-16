@@ -1,11 +1,18 @@
-# Phase 7 temporary AWS demonstration runbook
+# Phase 7 temporary AWS EKS demonstration runbook
 
-**Status: PENDING SEPARATE APPROVAL. Do not apply Terraform from this runbook.**
+Do not run until the exact Terraform plan and spending boundary are explicitly approved.
 
-The approved target is `ap-south-1`, two public worker subnets, no NAT Gateway, and one on-demand `t3.medium` worker with min/desired/max `1/1/2`. This is a temporary cost-controlled portfolio topology, not a production private-node design. The spending ceiling is USD 15 and the intended same-day demonstration is below USD 10–15.
+Required GitHub protected configuration: `AWS_PHASE7_ENABLED`, `AWS_ROLE_ARN`, `TF_STATE_BUCKET`, `TF_LOCK_TABLE`, `PHASE7_OWNER`, `PHASE7_EXPIRES_AT`, `PHASE7_API_CIDRS_JSON`, and secret `PHASE7_BUDGET_EMAIL`.
 
-Before approval, validate Terraform locally with `enable_eks=false`, configure a budget email, set mandatory owner/expiry tags, restrict the Kubernetes API to your current public `/32`, and save the exact `terraform plan`, checksum, resource inventory, and cost estimate. GitHub authenticates to AWS with OIDC; never create long-lived access keys.
+Sequence:
+1. Keep `AWS_PHASE7_ENABLED=false` during normal development.
+2. Produce the immutable GHCR digest only after local gates pass.
+3. Enable the protected environment and run **Phase 7 AWS Plan**.
+4. Review the plan text, checksum, API CIDR, region, worker sizing and teardown path.
+5. Explicitly approve the exact plan/digest/commit.
+6. Run **Phase 7 AWS Deploy** with `apply-demo` and `PHASE7_EKS_APPROVED`.
+7. Verify private cluster, persistence, rollback and temporary public endpoint evidence.
+8. Run the same workflow with `destroy` immediately after evidence capture.
+9. Require `aws-teardown.json` to report zero unexpected tagged resources.
 
-After a separately approved apply, copy the already verified GHCR digest to ECR without rebuilding it and verify digest equivalence. Deploy that digest with Helm. Verify through `kubectl port-forward` first. Only then create a temporary LoadBalancer, capture sanitized evidence, and remove it immediately.
-
-Destroy the cluster the same day, run `scripts/phase7/verify_aws_teardown.sh`, and inspect EKS, node groups, load balancers, NAT Gateways, EBS volumes, Elastic IPs, ECR, and tagged leftovers. Any NAT Gateway or unexpected billable resource is a failure.
+The demo uses one worker by default. Three etcd members on that worker are not node/AZ-level HA.

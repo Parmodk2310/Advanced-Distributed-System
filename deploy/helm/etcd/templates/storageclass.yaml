@@ -1,0 +1,14 @@
+{{- if .Values.storageClass.create }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.name }}
+provisioner: {{ .Values.storageClass.provisioner }}
+parameters:
+  type: {{ .Values.storageClass.type | quote }}
+  tagSpecification_1: "Phase=7"
+  tagSpecification_2: "Environment=phase7-demo"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: {{ .Values.storageClass.reclaimPolicy }}
+{{- end }}

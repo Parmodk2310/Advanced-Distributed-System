@@ -2,9 +2,42 @@
 
 ## Status
 
-**APPROVED DESIGN — NOT IMPLEMENTED**
+**PHASE 7A LOCAL DELIVERY IMPLEMENTED AND VERIFIED ON THE WORKING TREE; EXACT-COMMIT CI EVIDENCE PENDING. AWS EKS DEMONSTRATION PENDING SEPARATE APPROVAL.**
 
-This specification defines Phase 7. It does not claim that Kubernetes or AWS deployment has already been completed. Phase 7 becomes implemented and verified only after every mandatory local gate passes. AWS EKS remains a separately approved, temporary demonstration.
+Phase 7A local Kubernetes delivery has passed the cumulative working-tree release gate. Final Phase 7A status still requires evidence from the exact committed source and feature-branch CI. The temporary AWS EKS demonstration remains Phase 7B and requires separate approval before any AWS resource creation.
+
+## Delivery flow
+
+```mermaid
+flowchart TD
+  A[Source commit] --> B[Quality + security]
+  B --> C[Build OCI image once]
+  C --> D[SBOM + vulnerability scan]
+  D --> E[kind: 1 control-plane + 2 workers]
+  E --> F[3 application pods + local etcd]
+  F --> G[Persistence + rollback gates]
+  G --> H[Publish immutable GHCR digest + sign]
+  H --> I{Separate AWS approval}
+  I -->|approved| J[Reviewed Terraform plan]
+  J --> K[ECR + temporary EKS]
+  K --> L[Copy exact artifact to ECR - no rebuild]
+  L --> M[Helm: 3-member etcd]
+  M --> N[Helm: distributed system]
+  N --> O[Private verification]
+  O --> P[Temporary external verification]
+  P --> Q[Evidence]
+  Q --> R[Remove LB + Helm cleanup]
+  R --> S[Terraform destroy]
+  S --> T[Verify zero unexpected tagged resources]
+```
+
+Ownership boundary: Terraform owns AWS infrastructure; Helm owns Kubernetes
+resources. Secrets are never committed. Local mTLS material is ephemeral.
+Cloud resource creation is never a PR/push side effect.
+
+The single-worker EKS demonstration intentionally trades host-level availability
+for bounded portfolio/demo scope. It must never be described as multi-node or
+multi-AZ etcd HA.
 
 ## Purpose
 

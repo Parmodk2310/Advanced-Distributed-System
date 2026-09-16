@@ -1,7 +1,2 @@
-The {{ include "distributed-system.fullname" . }} release is internal-only.
-
-Check readiness:
-  kubectl -n {{ .Release.Namespace }} rollout status statefulset/{{ include "distributed-system.fullname" . }}
-
-Use a private port-forward for verification:
-  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "distributed-system.fullname" . }}-metrics 9100:{{ .Values.service.observabilityPort }}
+Phase 7 distributed-system release installed.
+The committed chart exposes only internal services. Use kubectl port-forward for private verification.

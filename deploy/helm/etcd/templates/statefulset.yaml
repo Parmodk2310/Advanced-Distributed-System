@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "etcd.fullname" . }}
+  labels:
+    {{- include "etcd.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "etcd.fullname" . }}-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      {{- include "etcd.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "etcd.selectorLabels" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: etcd
+          image: {{ include "etcd.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/etcd"]
+          args:
+            - "--name=$(POD_NAME)"
+            - "--data-dir=/var/lib/etcd"
+            - "--listen-client-urls=http://0.0.0.0:{{ .Values.service.clientPort }}"
+            - "--advertise-client-urls=http://$(POD_NAME).{{ include "etcd.fullname" . }}-headless:{{ .Values.service.clientPort }}"
+            - "--listen-peer-urls=http://0.0.0.0:{{ .Values.service.peerPort }}"
+            - "--initial-advertise-peer-urls=http://$(POD_NAME).{{ include "etcd.fullname" . }}-headless:{{ .Values.service.peerPort }}"
+            - "--initial-cluster={{ include "etcd.initialCluster" . }}"
+            - "--initial-cluster-state=new"
+            - "--initial-cluster-token=phase7-etcd"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ETCDCTL_API
+              value: "3"
+            - name: ETCDCTL_ENDPOINTS
+              value: "http://127.0.0.1:2379"
+          ports:
+            - name: client
+              containerPort: {{ .Values.service.clientPort }}
+            - name: peer
+              containerPort: {{ .Values.service.peerPort }}
+          startupProbe:
+            exec:
+              command: ["/usr/local/bin/etcdctl", "endpoint", "health"]
+            failureThreshold: 60
+            periodSeconds: 2
+          readinessProbe:
+            exec:
+              command: ["/usr/local/bin/etcdctl", "endpoint", "health"]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["/usr/local/bin/etcdctl", "endpoint", "health"]
+            periodSeconds: 10
+            failureThreshold: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/etcd
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}

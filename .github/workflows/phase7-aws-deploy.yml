@@ -2,32 +2,143 @@ name: Phase 7 AWS Deploy
 on:
   workflow_dispatch:
     inputs:
-      action: {description: "apply, verify, or destroy", required: true, type: choice, options: [apply, verify, destroy]}
-      expected_commit: {description: "Approved source commit", required: true, type: string}
-      approved_ghcr_digest: {description: "Approved sha256 digest", required: true, type: string}
+      action:
+        description: "apply-demo or destroy"
+        required: true
+        type: choice
+        options: [apply-demo, destroy]
+      expected_commit:
+        description: "Exact approved source commit"
+        required: true
+        type: string
+      approved_ghcr_digest:
+        description: "Approved GHCR sha256 digest"
+        required: true
+        type: string
+      reviewed_plan_run_id:
+        description: "AWS Plan workflow run ID (required for apply-demo)"
+        required: false
+        type: string
+      confirmation:
+        description: "Type PHASE7_EKS_APPROVED"
+        required: true
+        type: string
 permissions:
+  actions: read
   contents: read
   id-token: write
+  packages: read
+concurrency:
+  group: phase7-aws-demo
+  cancel-in-progress: false
 jobs:
   controlled-action:
-    if: vars.AWS_PHASE7_ENABLED == 'true' && inputs.expected_commit == github.sha
+    if: vars.AWS_PHASE7_ENABLED == 'true' && inputs.expected_commit == github.sha && inputs.confirmation == 'PHASE7_EKS_APPROVED'
     environment: phase7-aws-demo
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_VAR_owner: ${{ vars.PHASE7_OWNER }}
+      TF_VAR_expires_at: ${{ vars.PHASE7_EXPIRES_AT }}
+      TF_VAR_budget_email: ${{ secrets.PHASE7_BUDGET_EMAIL }}
+      TF_VAR_kubernetes_api_cidrs: ${{ vars.PHASE7_API_CIDRS_JSON }}
+      TF_VAR_enable_eks: "true"
+      GHCR_IMAGE: ghcr.io/parmodk2310/distsys-node@${{ inputs.approved_ghcr_digest }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Require immutable digest and matching commit
+        run: |
+          [[ "${{ inputs.approved_ghcr_digest }}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test "$(git rev-parse HEAD)" = "${{ inputs.expected_commit }}"
       - uses: aws-actions/configure-aws-credentials@v4
         with: {role-to-assume: "${{ vars.AWS_ROLE_ARN }}", aws-region: ap-south-1}
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.9.8}
-      - name: Require digest binding
-        run: '[[ "${{ inputs.approved_ghcr_digest }}" == sha256:* ]]'
-      - name: Apply separately approved saved plan
-        if: inputs.action == 'apply'
-        run: 'echo "Download and checksum-match the reviewed plan before apply"; exit 1'
-      - name: Verify private endpoint first
-        if: inputs.action == 'verify'
-        run: bash scripts/phase7/verify_eks.sh
-      - name: Destroy and verify zero resources
+      - uses: azure/setup-helm@v4
+        with: {version: v3.17.3}
+      - uses: azure/setup-kubectl@v4
+        with: {version: v1.32.2}
+      - uses: imjasonh/setup-crane@v0.4
+      - name: Configure remote Terraform state
+        run: |
+          mkdir -p .phase7/evidence
+          cat > .phase7/backend.hcl <<EOF
+          bucket = "${{ vars.TF_STATE_BUCKET }}"
+          key = "advanced-distributed-system/phase7.tfstate"
+          region = "ap-south-1"
+          encrypt = true
+          dynamodb_table = "${{ vars.TF_LOCK_TABLE }}"
+          EOF
+          chmod 600 .phase7/backend.hcl
+          terraform -chdir=deploy/terraform/aws init -input=false -reconfigure -backend-config="$GITHUB_WORKSPACE/.phase7/backend.hcl"
+      - name: Download and checksum reviewed plan
+        if: inputs.action == 'apply-demo'
+        run: |
+          test -n "${{ inputs.reviewed_plan_run_id }}"
+          mkdir -p .phase7/reviewed
+          gh run download "${{ inputs.reviewed_plan_run_id }}" --repo "${{ github.repository }}" --name "phase7-reviewed-plan-${{ github.sha }}" --dir .phase7/reviewed
+          (cd .phase7/reviewed && sha256sum -c phase7-plan.sha256)
+      - name: Apply exactly the reviewed plan
+        if: inputs.action == 'apply-demo'
+        run: terraform -chdir=deploy/terraform/aws apply -input=false "$GITHUB_WORKSPACE/.phase7/reviewed/phase7.tfplan"
+      - name: Configure kubeconfig
+        run: |
+          cluster="$(terraform -chdir=deploy/terraform/aws output -raw cluster_name 2>/dev/null || true)"
+          if [[ -n "$cluster" && "$cluster" != "null" ]]; then aws eks update-kubeconfig --region ap-south-1 --name "$cluster"; fi
+      - name: Promote exact GHCR artifact into ECR without rebuilding
+        if: inputs.action == 'apply-demo'
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          ecr_repo="$(terraform -chdir=deploy/terraform/aws output -raw ecr_repository_url)"
+          registry="${ecr_repo%%/*}"
+          aws ecr get-login-password --region ap-south-1 | crane auth login "$registry" -u AWS --password-stdin
+          export ECR_IMAGE="$ecr_repo:${{ github.sha }}"
+          target_digest="$(bash scripts/phase7/promote_ghcr_to_ecr.sh)"
+          printf '%s' "$target_digest" > .phase7/ecr-digest
+          printf '%s' "$ecr_repo" > .phase7/ecr-repository
+      - name: Deploy etcd then the distributed system
+        if: inputs.action == 'apply-demo'
+        run: |
+          kubectl create namespace distsys --dry-run=client -o yaml | kubectl apply -f -
+          bash scripts/phase7/generate_tls_secret.sh
+          helm upgrade --install phase7-etcd deploy/helm/etcd -n distsys -f deploy/helm/etcd/values-eks.yaml --wait --timeout 5m
+          ecr_repo="$(cat .phase7/ecr-repository)"
+          digest="$(cat .phase7/ecr-digest)"
+          helm upgrade --install phase7 deploy/helm/distributed-system -n distsys -f deploy/helm/distributed-system/values-eks.yaml --set image.repository="$ecr_repo" --set image.digest="$digest" --wait --timeout 5m
+      - name: Private EKS, persistence and rollback verification
+        if: inputs.action == 'apply-demo'
+        run: |
+          bash scripts/phase7/verify_eks.sh
+          PYTHONPATH=src python scripts/phase7/verify_persistence.py --output .phase7/evidence/eks-persistence.json
+          bash scripts/phase7/verify_rollback.sh
+      - name: Temporary external verification
+        if: inputs.action == 'apply-demo'
+        run: |
+          bash scripts/phase7/enable_public_endpoint.sh
+          for i in $(seq 1 60); do
+            host="$(kubectl -n distsys get svc phase7-public -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+            [[ -n "$host" ]] && break
+            sleep 5
+          done
+          test -n "${host:-}"
+          PYTHONPATH=src python scripts/phase7/verify_public_endpoint.py --host "$host" --output .phase7/evidence/eks-public.json
+      - name: Always remove temporary external endpoint
+        if: always() && inputs.action == 'apply-demo'
+        run: bash scripts/phase7/disable_public_endpoint.sh
+      - name: Destroy application, etcd and AWS infrastructure
         if: inputs.action == 'destroy'
-        run: terraform -chdir=deploy/terraform/aws destroy -input=false && bash scripts/phase7/verify_aws_teardown.sh
+        run: |
+          bash scripts/phase7/disable_public_endpoint.sh || true
+          helm -n distsys uninstall phase7 --wait --timeout 5m || true
+          helm -n distsys uninstall phase7-etcd --wait --timeout 5m || true
+          kubectl -n distsys delete pvc --all --wait=true --timeout=5m || true
+          terraform -chdir=deploy/terraform/aws destroy -input=false -auto-approve
+          bash scripts/phase7/verify_aws_teardown.sh > .phase7/evidence/aws-teardown.json
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: "phase7-aws-evidence-${{ github.sha }}", path: .phase7/evidence/*.json, retention-days: 7, if-no-files-found: ignore}
