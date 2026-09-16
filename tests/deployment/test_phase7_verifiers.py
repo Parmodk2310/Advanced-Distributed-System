@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_cluster_verifier_is_bounded_and_checks_security() -> None:
     text = (ROOT / "scripts/phase7/verify_cluster.py").read_text()
     assert "timeout=timeout" in text
+    assert "forwarded endpoint did not become ready" in text
     assert "ready != 3" in text
     assert "mTLS connection without a client identity" in text
     assert '"crdt_convergence": "pass"' in text

@@ -103,6 +103,20 @@ def get_text(url: str) -> str:
         return response.read().decode("utf-8")
 
 
+async def wait_http(url: str, *, json_response: bool, timeout: float = 15.0) -> Any:
+    """Wait until the forwarded backend, not only the local socket, responds."""
+    deadline = time.monotonic() + timeout
+    last_error: OSError | None = None
+    while time.monotonic() < deadline:
+        try:
+            function = get_json if json_response else get_text
+            return await asyncio.to_thread(function, url)
+        except OSError as exc:
+            last_error = exc
+            await asyncio.sleep(0.2)
+    raise TimeoutError(f"forwarded endpoint did not become ready: {url}") from last_error
+
+
 async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, Any]:
     statefulset = json.loads(
         run(
@@ -127,10 +141,10 @@ async def verify(namespace: str, release: str, work_dir: Path) -> dict[str, Any]
         await stack.enter_async_context(PortForward(namespace, pod2, ("18002:8000", "19102:9100")))
 
         for port in (19100, 19102):
-            health = await asyncio.to_thread(get_json, f"http://127.0.0.1:{port}/health/ready")
+            health = await wait_http(f"http://127.0.0.1:{port}/health/ready", json_response=True)
             if not health.get("readiness"):
                 raise AssertionError(f"node on observability port {port} is not ready")
-            metrics = await asyncio.to_thread(get_text, f"http://127.0.0.1:{port}/metrics")
+            metrics = await wait_http(f"http://127.0.0.1:{port}/metrics", json_response=False)
             if "distsys_requests_total" not in metrics:
                 raise AssertionError("expected distsys_requests_total metric")
 
