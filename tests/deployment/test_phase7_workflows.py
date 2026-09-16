@@ -95,3 +95,63 @@ def test_image_workflow_tracks_inputs_and_requires_explicit_manual_publish() -> 
     assert "inputs.publish" in t
     assert "github.event_name == 'workflow_dispatch'" in t
     assert "github.ref == 'refs/heads/main'" in t
+
+
+def test_aws_deploy_uses_temporary_runner_api_access() -> None:
+    text = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert "- name: Temporarily authorize GitHub runner for EKS API" in text
+    assert "id: eks_api_access" in text
+    assert "CHECK_IP_HOST: checkip.amazonaws.com" in text
+    assert '"https://${CHECK_IP_HOST}"' in text
+    assert 'runner_cidr="${runner_ip}/32"' in text
+    assert "publicAccessCidrs" in text
+    assert "aws eks update-cluster-config" in text
+    assert "aws eks wait cluster-active" in text
+    assert 'index("0.0.0.0/0") == null' in text
+
+
+def test_aws_deploy_restores_approved_api_cidrs_even_after_failure() -> None:
+    text = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert "- name: Always restore approved EKS API CIDRs" in text
+    assert "if: always()" in text
+    assert "TF_VAR_kubernetes_api_cidrs" in text
+    assert "Restore approved EKS API CIDRs" in text
+
+
+def test_aws_deploy_does_not_treat_terraform_warnings_as_cluster_name() -> None:
+    text = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert "terraform -chdir=deploy/terraform/aws output -json" in text
+    assert "jq -r '.cluster_name.value // empty'" in text
+    assert "output -raw cluster_name 2>/dev/null || true" not in text
+
+
+def test_aws_destroy_reaches_terraform_without_kubernetes_access() -> None:
+    text = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert "- name: Destroy application, etcd and AWS infrastructure" in text
+    assert "if: always() && inputs.action == 'destroy'" in text
+    assert "KUBERNETES_ACCESS_READY" in text
+    assert 'if [[ "$KUBERNETES_ACCESS_READY" == "true" ]]' in text
+    assert "terraform -chdir=deploy/terraform/aws destroy " "-input=false -auto-approve" in text
+
+
+def test_temporary_public_endpoint_cleanup_is_idempotent() -> None:
+    text = read("scripts/phase7/disable_public_endpoint.sh")
+
+    assert 'delete service "${PHASE7_RELEASE}-public" ' "--ignore-not-found" in text
+    assert (
+        "delete networkpolicy "
+        '"${PHASE7_RELEASE}-temporary-public-ingress" '
+        "--ignore-not-found" in text
+    )
+
+
+def test_aws_apply_requires_cluster_output_but_destroy_can_continue() -> None:
+    workflow = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert 'if [[ "$ACTION" == "destroy" ]]' in workflow
+    assert "No EKS cluster output during apply-demo" in workflow
+    assert "Kubernetes cleanup will be skipped" in workflow
