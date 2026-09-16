@@ -18,6 +18,13 @@ def test_cloud_foundation_is_inert_and_cost_bounded():
     assert 'default = "1.36"' in variables
 
 
+def test_cloud_foundation_excludes_local_and_wavelength_zones() -> None:
+    network = read("network.tf")
+
+    assert 'name   = "zone-type"' in network
+    assert 'values = ["availability-zone"]' in network
+
+
 def test_remote_state_and_ebs_csi_are_present():
     assert 'backend "s3"' in read("versions.tf")
     eks = read("eks.tf")
