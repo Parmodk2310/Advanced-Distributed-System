@@ -7,7 +7,9 @@ metadata:
 spec:
   serviceName: {{ include "distributed-system.fullname" . }}-headless
   replicas: {{ .Values.replicaCount }}
-  podManagementPolicy: Parallel
+  # Ordered startup makes etcd discovery deterministic: node 0 becomes a
+  # reachable seed before nodes 1 and 2 register and attempt secure joins.
+  podManagementPolicy: OrderedReady
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:

@@ -61,6 +61,7 @@ def test_statefulset_enforces_identity_health_and_security() -> None:
 
     required = (
         "kind: StatefulSet",
+        "podManagementPolicy: OrderedReady",
         "fieldPath: metadata.name",
         "volumeClaimTemplates:",
         "path: /health/live",
