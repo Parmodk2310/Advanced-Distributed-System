@@ -1,39 +1,80 @@
 variable "aws_region" {
-  type = string
+  type    = string
   default = "ap-south-1"
-  validation { condition = var.aws_region == "ap-south-1"
-  error_message = "Phase 7 is costed for ap-south-1." }
+
+  validation {
+    condition     = var.aws_region == "ap-south-1"
+    error_message = "Phase 7 is costed for ap-south-1."
+  }
 }
-variable "project_name" { type = string
-  default = "advanced-distributed-system" }
-variable "environment" { type = string
-  default = "phase7-demo" }
-variable "owner" { type = string
-  description = "Mandatory owner tag." }
-variable "expires_at" { type = string
-  description = "Mandatory ISO-8601 expiry tag." }
-variable "budget_email" { type = string
-  sensitive = true
-  description = "Budget alert recipient." }
+
+variable "project_name" {
+  type    = string
+  default = "advanced-distributed-system"
+}
+
+variable "environment" {
+  type    = string
+  default = "phase7-demo"
+}
+
+variable "owner" {
+  type        = string
+  description = "Mandatory owner tag."
+}
+
+variable "expires_at" {
+  type        = string
+  description = "Mandatory ISO-8601 expiry tag."
+}
+
+variable "budget_email" {
+  type        = string
+  sensitive   = true
+  description = "Budget alert recipient."
+}
+
 variable "monthly_budget_usd" {
-  type = number
+  type    = number
   default = 15
-  validation { condition = var.monthly_budget_usd > 0 && var.monthly_budget_usd <= 15
-  error_message = "Budget must be between 0 and 15 USD." }
+
+  validation {
+    condition     = var.monthly_budget_usd > 0 && var.monthly_budget_usd <= 15
+    error_message = "Budget must be between 0 and 15 USD."
+  }
 }
-variable "enable_eks" { type = bool
-  default = false }
+
+variable "enable_eks" {
+  type    = bool
+  default = false
+}
+
 variable "kubernetes_api_cidrs" {
-  type = list(string)
+  type    = list(string)
   default = ["192.0.2.1/32"]
-  validation { condition = alltrue([for cidr in var.kubernetes_api_cidrs : cidr != "0.0.0.0/0"])
-  error_message = "Restrict the Kubernetes API to your public /32." }
+
+  validation {
+    condition     = alltrue([for cidr in var.kubernetes_api_cidrs : cidr != "0.0.0.0/0"])
+    error_message = "Restrict the Kubernetes API to your public /32."
+  }
 }
-variable "node_instance_types" { type = list(string)
-  default = ["t3.medium"] }
-variable "node_min_size" { type = number
-  default = 1 }
-variable "node_desired_size" { type = number
-  default = 1 }
-variable "node_max_size" { type = number
-  default = 2 }
+
+variable "node_instance_types" {
+  type    = list(string)
+  default = ["t3.medium"]
+}
+
+variable "node_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "node_desired_size" {
+  type    = number
+  default = 1
+}
+
+variable "node_max_size" {
+  type    = number
+  default = 2
+}

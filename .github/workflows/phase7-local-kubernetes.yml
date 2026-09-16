@@ -12,6 +12,21 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  terraform-static:
+    name: Validate cost-bounded Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.9.8}
+      - name: Format and validate without credentials or backend
+        working-directory: deploy/terraform/aws
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate
+
   local-release:
     runs-on: ubuntu-latest
     timeout-minutes: 25

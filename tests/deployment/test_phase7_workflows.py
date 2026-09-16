@@ -21,6 +21,32 @@ def test_local_workflow_is_bounded_and_cleans_up() -> None:
     assert "pull_request_target" not in text
 
 
+def test_image_workflow_enforces_supply_chain_controls() -> None:
+    text = (WORKFLOWS / "phase7-image-publish.yml").read_text()
+    workflow = load("phase7-image-publish.yml")
+    assert workflow["permissions"] == {
+        "attestations": "write",
+        "contents": "read",
+        "id-token": "write",
+        "packages": "write",
+    }
+    assert "gitleaks/gitleaks-action" in text
+    assert "aquasecurity/trivy-action" in text
+    assert "anchore/sbom-action" in text
+    assert "actions/attest-build-provenance" in text
+    assert "ghcr.io/parmodk2310/distsys-node" in text
+    assert "kubeconform" in text and "conftest" in text
+
+
+def test_local_workflow_validates_terraform_without_applying() -> None:
+    text = (WORKFLOWS / "phase7-local-kubernetes.yml").read_text()
+    assert "terraform-static" in text
+    assert "terraform fmt -check -recursive" in text
+    assert "terraform init -backend=false" in text
+    assert "terraform validate" in text
+    assert "terraform apply" not in text
+
+
 def test_aws_workflows_are_manual_oidc_and_disabled_by_default() -> None:
     text = "\n".join(
         (WORKFLOWS / name).read_text() for name in ("phase7-aws-plan.yml", "phase7-aws-deploy.yml")

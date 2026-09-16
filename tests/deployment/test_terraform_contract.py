@@ -21,11 +21,13 @@ def test_terraform_is_disabled_and_cost_bounded_by_default() -> None:
 
 def test_network_and_cluster_contract() -> None:
     text = all_tf()
-    assert 'resource "aws_subnet" "public"' in text and "count = var.enable_eks ? 2 : 0" in text
+    compact = " ".join(text.split())
+    assert 'resource "aws_subnet" "public"' in text
+    assert "count = var.enable_eks ? 2 : 0" in compact
     assert "aws_nat_gateway" not in text
-    assert 'cidr != "0.0.0.0/0"' in text
-    assert "endpoint_private_access = true" in text
-    assert 'capacity_type = "ON_DEMAND"' in text
+    assert 'cidr != "0.0.0.0/0"' in compact
+    assert "endpoint_private_access = true" in compact
+    assert 'capacity_type = "ON_DEMAND"' in compact
     assert "encryption_config" in text
 
 

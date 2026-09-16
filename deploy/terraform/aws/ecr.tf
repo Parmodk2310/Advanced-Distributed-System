@@ -1,11 +1,29 @@
 resource "aws_ecr_repository" "node" {
-  name = "${local.name}-node"
+  name                 = "${local.name}-node"
   image_tag_mutability = "IMMUTABLE"
-  force_delete = false
-  image_scanning_configuration { scan_on_push = true }
-  encryption_configuration { encryption_type = "AES256" }
+  force_delete         = false
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
 }
+
 resource "aws_ecr_lifecycle_policy" "node" {
   repository = aws_ecr_repository.node.name
-  policy = jsonencode({ rules = [{ rulePriority = 1, description = "Keep ten images", selection = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 10 }, action = { type = "expire" } }] })
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep ten images"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
 }
