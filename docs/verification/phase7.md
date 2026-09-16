@@ -1,28 +1,41 @@
-# Phase 7 verification
+# Phase 7 verification ledger
 
-## Status
+Status: **IN PROGRESS until fresh final evidence is attached to the exact final commit.**
 
-**Local Kubernetes delivery implemented and verified; AWS EKS demonstration pending.**
+No AWS resource is created by Phase 7A verification. Any Phase 7B AWS infrastructure must remain separately approved and temporary.
 
-Phase 7A provides a hardened OCI image, a three-node Helm StatefulSet, ephemeral per-pod mTLS, kind lifecycle, PVC restart verification, rollback verification, an inert-by-default AWS Terraform module, and GitHub Actions contracts.
+Do not create or move the `v0.7.0` tag until Phase 7A, the approved Phase 7B demonstration, teardown verification, and final repository hygiene all pass on the exact release commit.
 
-Local evidence fields are written to `.phase7/evidence/`: `ready_replicas`, `health`, `metrics`, `mtls_rejection`, `crdt_convergence`, `persistence_restart`, `causal_read_after_restart`, and `phase7_local_release_gate`. Evidence contains no certificate or credential material.
+## Phase 7A required evidence
 
-Run `make phase7-release-gate` on a Docker-capable laptop. GitHub Actions must pass before a commit is recorded here as the final Phase 7A checkpoint.
+- quality suite result
+- deployment test count
+- Docker image user/entrypoint/import
+- image vulnerability scan
+- SBOM path/digest
+- kind node topology
+- three application pods Ready
+- CRDT convergence
+- mTLS positive/negative tests
+- persistence restart with same PVC
+- rollback + healthy re-verification
+- Terraform fmt/validate
+- cleanup result
 
+## Phase 7B required evidence
 
-## Verified Phase 7A checkpoint
+- approved source commit
+- approved GHCR digest
+- reviewed Terraform plan checksum
+- ECR destination digest and source equality
+- EKS cluster/worker identity
+- three etcd members and PVCs
+- three application pods and PVCs
+- private verification
+- temporary public verification
+- persistence + rollback
+- external endpoint deletion
+- Terraform destroy
+- zero unexpected Phase 7-tagged resources
 
-- Source commit: [`93c0553`](https://github.com/Parmodk2310/Advanced-Distributed-System/commit/93c0553dbcd72e165cc14c9e87290e2e610e335d)
-- Repository quality: [GitHub Actions run 35057943329](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35057943329)
-- Image, security, SBOM, provenance, and local lifecycle: [GitHub Actions run 35057943330](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35057943330)
-- Independent local release gate and Terraform validation: [GitHub Actions run 35057943309](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35057943309)
-- Verified image: `ghcr.io/parmodk2310/distsys-node@sha256:cc5631dc723058f9d71b1c37fce566706c317d12d50a1c98f6c24139ad448cae`
-
-The retained Actions artifacts contain sanitized JSON verification evidence, digest-bound provenance metadata, and the SPDX SBOM. GitHub-native attestations are unavailable for user-owned private repositories and activate automatically if the repository becomes public. Ephemeral certificates, keys, Kubernetes clusters, and local workspaces are removed by unconditional cleanup steps.
-
-## AWS Phase 7B
-
-**PENDING SEPARATE APPROVAL.** No AWS resource creation is claimed. An exact Terraform plan, plan checksum, source commit, GHCR digest, full resource/cost inventory, budget alert, deployment duration, and teardown procedure must be approved before apply. Verification must be private-first, the temporary LoadBalancer must be deleted, and zero-resource checks must pass after destroy.
-
-Phase 7 does not add consensus, linearizability, quorum durability, exactly-once execution, distributed transactions, multi-region recovery, or permanent production operations.
+Do not replace `IN PROGRESS` with `VERIFIED COMPLETE` until all applicable items are supported by fresh evidence from the final commit.

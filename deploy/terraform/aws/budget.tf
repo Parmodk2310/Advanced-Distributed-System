@@ -4,7 +4,6 @@ resource "aws_budgets_budget" "phase7" {
   limit_amount = tostring(var.monthly_budget_usd)
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
-
   notification {
     comparison_operator        = "GREATER_THAN"
     threshold                  = 80

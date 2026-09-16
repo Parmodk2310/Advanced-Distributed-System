@@ -1,24 +1,2 @@
-{{- if .Values.serviceAccount.create }}
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ include "distributed-system.fullname" . }}
-  labels:
-    {{- include "distributed-system.labels" . | nindent 4 }}
-rules: []
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ include "distributed-system.fullname" . }}
-  labels:
-    {{- include "distributed-system.labels" . | nindent 4 }}
-subjects:
-  - kind: ServiceAccount
-    name: {{ include "distributed-system.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ include "distributed-system.fullname" . }}
-{{- end }}
+# The application does not require Kubernetes API access.
+# This file is intentionally empty beyond this comment; the ServiceAccount token is not mounted.

@@ -1,14 +1,15 @@
 releaseMode: true
-
 image:
   repository: ""
   tag: ""
   digest: ""
   pullPolicy: IfNotPresent
-
 persistence:
-  storageClass: gp3
+  storageClass: phase7-gp3
   size: 2Gi
-
+etcd:
+  endpoints: http://phase7-etcd:2379
+observability:
+  tracingEnabled: false
 publicEndpoint:
   enabled: false

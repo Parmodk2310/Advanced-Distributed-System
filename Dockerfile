@@ -1,17 +1,21 @@
-FROM python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7 AS builder
+FROM python:3.12.14-alpine3.24@sha256:b64631e04e4920160c50fbe8d8df828f7f35f06f425cb44aa09bca53e708a35a AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
+
+RUN apk upgrade --no-cache
 
 WORKDIR /build
 
 COPY pyproject.toml README.md ./
 COPY src ./src
 
-RUN python -m pip wheel --wheel-dir /wheelhouse --no-deps .
+RUN python -m pip wheel \
+    --wheel-dir /wheelhouse \
+    --no-deps \
+    .
 
-
-FROM python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7 AS runtime
+FROM python:3.12.14-alpine3.24@sha256:b64631e04e4920160c50fbe8d8df828f7f35f06f425cb44aa09bca53e708a35a AS runtime
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -19,11 +23,12 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     TMPDIR=/tmp
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd --gid 10001 distsys \
-    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin distsys \
+RUN apk upgrade --no-cache \
+    && addgroup -S -g 10001 distsys \
+    && adduser -S -D -H \
+       -u 10001 \
+       -G distsys \
+       distsys \
     && mkdir -p /data /tmp /wheelhouse \
     && chown -R 10001:10001 /data /tmp
 
@@ -33,9 +38,11 @@ RUN python -m pip install /wheelhouse/*.whl \
     && rm -rf /wheelhouse
 
 USER 10001:10001
+
 WORKDIR /data
 
 VOLUME ["/data"]
+
 EXPOSE 8000 9100
 
 ENTRYPOINT ["python", "-m", "distsys.main"]

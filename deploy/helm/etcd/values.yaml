@@ -1,0 +1,25 @@
+replicaCount: 3
+image:
+  repository: quay.io/coreos/etcd
+  tag: v3.5.15
+  digest: sha256:0934690612905554eb61ddefb9faaaecb47c2f6931dbb453e694358092ee8990
+  pullPolicy: IfNotPresent
+service:
+  clientPort: 2379
+  peerPort: 2380
+persistence:
+  storageClass: phase7-gp3
+  size: 2Gi
+storageClass:
+  create: false
+  name: phase7-gp3
+  provisioner: ebs.csi.aws.com
+  type: gp3
+  reclaimPolicy: Delete
+resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {cpu: 500m, memory: 512Mi}
+podDisruptionBudget:
+  minAvailable: 2
+networkPolicy:
+  enabled: true

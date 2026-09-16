@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["replicaCount", "image", "service", "persistence", "podDisruptionBudget"],
+  "properties": {
+    "replicaCount": {"type": "integer", "const": 3},
+    "image": {"type": "object", "required": ["repository", "tag", "digest"]},
+    "persistence": {"type": "object", "required": ["storageClass", "size"]},
+    "podDisruptionBudget": {"type": "object", "required": ["minAvailable"]}
+  }
+}

@@ -2,7 +2,6 @@ name: Phase 7 Local Kubernetes
 on:
   workflow_dispatch:
   push:
-    branches: [main]
     paths: ["Dockerfile", "deploy/**", "scripts/phase7/**", "tests/deployment/**", ".github/workflows/phase7-*.yml"]
   pull_request:
     paths: ["Dockerfile", "deploy/**", "scripts/phase7/**", "tests/deployment/**", ".github/workflows/phase7-*.yml"]
@@ -13,23 +12,20 @@ permissions:
   contents: read
 jobs:
   terraform-static:
-    name: Validate cost-bounded Terraform
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.9.8}
-      - name: Format and validate without credentials or backend
-        working-directory: deploy/terraform/aws
+      - working-directory: deploy/terraform/aws
         run: |
           terraform fmt -check -recursive
-          terraform init -backend=false
+          terraform init -backend=false -input=false
           terraform validate
-
   local-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,15 +37,21 @@ jobs:
         with: {version: v1.32.2}
       - uses: helm/kind-action@v1
         with: {install_only: true, version: v0.26.0}
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.9.8}
       - uses: docker/setup-buildx-action@v3
       - name: Deployment contracts
         run: python -m pytest tests/deployment -q
-      - name: Live kind release gate
+      - name: Live Phase 7A release gate
         run: bash scripts/phase7/release_gate.sh
       - name: Upload sanitized evidence
         if: always()
         uses: actions/upload-artifact@v4
-        with: {name: phase7-local-evidence, path: .phase7/evidence/*.json, retention-days: 7, if-no-files-found: ignore}
+        with:
+          name: phase7-local-evidence
+          path: .phase7/evidence/*.json
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Always clean
         if: always()
         run: bash scripts/phase7/cluster_down.sh

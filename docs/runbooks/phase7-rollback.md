@@ -1,5 +1,9 @@
 # Phase 7 rollback runbook
 
-List revisions with `helm -n distsys history phase7`. Roll back using `helm -n distsys rollback phase7 REVISION --wait --timeout 5m`, then run `make phase7-local-verify`. The automated local gate creates a non-destructive unhealthy revision, requires its rollout to fail, restores the previous revision, and reruns the verifier.
+The automated rollback gate upgrades the current release with an intentionally invalid readiness path. It must fail without a database schema change. The script then rolls back to the previous Helm revision, recreates the affected highest-ordinal pod, waits for StatefulSet recovery, and reruns the healthy CRDT/mTLS verifier.
 
-Rollback does not reverse incompatible database migrations. Phase 7 introduces no database schema migration; future schema changes require a separate forward/backward compatibility plan and backup test.
+```bash
+bash scripts/phase7/verify_rollback.sh
+```
+
+A rollback is not successful until the post-rollback verifier exits zero.

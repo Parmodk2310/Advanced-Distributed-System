@@ -1,0 +1,7 @@
+apiVersion: v2
+name: etcd
+description: Phase 7B three-member etcd quorum chart for the temporary EKS demonstration
+type: application
+version: 0.7.0
+appVersion: "3.5.15"
+kubeVersion: ">=1.29.0-0"

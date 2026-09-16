@@ -38,3 +38,4 @@ benchmark-results/
 *.tfstate.*
 *.tfplan
 kubeconfig*
+.terraform/
