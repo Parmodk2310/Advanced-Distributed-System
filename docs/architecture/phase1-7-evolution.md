@@ -1,6 +1,6 @@
 # Phase 1–7 Capability Evolution
 
-**Status: Phases 1–7 implemented and verified; Phase 7 cloud evidence covers a temporary apply–verify–destroy lifecycle.**
+**Status: Phases 1–7 implemented and verified; Phase 7 cloud evidence covers a temporary one-worker apply–verify–destroy lifecycle, not permanent hosting or multi-AZ readiness.**
 
 The system grows by preserving earlier guarantees while adding a new engineering boundary in each phase.
 
@@ -24,6 +24,6 @@ flowchart TB
 | 4 | Causal CRDT replication and convergence | [Verification](../verification/phase4.md) |
 | 5 | Durable recovery, etcd coordination and mTLS | [Verification](../verification/phase5.md) |
 | 6 | Telemetry, controlled faults and performance gates | [Verification](../verification/phase6.md) |
-| 7 | Local Kubernetes to temporary AWS EKS lifecycle | [Verification](../verification/phase7.md) |
+| 7 | Local Kubernetes to temporary one-worker AWS EKS lifecycle; destroyed after verification | [Verification](../verification/phase7.md) |
 
 See the [architecture guide](README.md), [design specifications](../design/) and [roadmap](../roadmap.md).
