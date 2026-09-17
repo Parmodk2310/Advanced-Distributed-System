@@ -216,7 +216,10 @@ jobs:
             sleep 5
           done
           test -n "${host:-}"
-          PYTHONPATH=src python scripts/phase7/verify_public_endpoint.py --host "$host" --output .phase7/evidence/eks-public.json
+          PYTHONPATH=src python scripts/phase7/verify_public_endpoint.py --host "$host" \
+            --readiness-timeout 300 \
+            --poll-interval 5 \
+            --output .phase7/evidence/eks-public.json
       - name: Always remove temporary external endpoint
         if: always() && inputs.action == 'apply-demo' && steps.eks_api_access.outputs.authorized == 'true'
         run: bash scripts/phase7/disable_public_endpoint.sh
@@ -230,6 +233,12 @@ jobs:
             helm -n distsys uninstall phase7 --wait --timeout 5m || true
             helm -n distsys uninstall phase7-etcd --wait --timeout 5m || true
             kubectl -n distsys delete pvc --all --wait=true --timeout=5m || true
+            if bash scripts/phase7/wait_for_ebs_deletion.sh; then
+              echo "EBS convergence completed"
+            else
+              waiter_status=$?
+              echo "EBS convergence check failed or timed out (exit ${waiter_status}); continuing to Terraform destroy" >&2
+            fi
           else
             echo "Kubernetes API unavailable; continuing directly to Terraform destroy"
           fi

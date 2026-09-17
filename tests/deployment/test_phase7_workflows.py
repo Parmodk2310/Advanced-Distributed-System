@@ -175,3 +175,31 @@ def test_aws_destroy_passes_exact_backend_allowlist_to_teardown_verifier() -> No
     assert "PHASE7_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}" in workflow
     assert "PHASE7_TF_LOCK_TABLE: ${{ vars.TF_LOCK_TABLE }}" in workflow
     assert "bash scripts/phase7/verify_aws_teardown.sh" in workflow
+
+
+def test_public_endpoint_readiness_is_bounded_and_configurable() -> None:
+    workflow = read(".github/workflows/phase7-aws-deploy.yml")
+
+    invocation = "PYTHONPATH=src python scripts/phase7/verify_public_endpoint.py " '--host "$host"'
+    assert invocation in workflow
+    assert "--readiness-timeout 300" in workflow
+    assert "--poll-interval 5" in workflow
+
+
+def test_destroy_waits_for_ebs_convergence_before_terraform_destroy() -> None:
+    workflow = read(".github/workflows/phase7-aws-deploy.yml")
+
+    wait = workflow.index("bash scripts/phase7/wait_for_ebs_deletion.sh")
+    destroy = workflow.index(
+        "terraform -chdir=deploy/terraform/aws destroy " "-input=false -auto-approve"
+    )
+
+    assert wait < destroy
+
+
+def test_destroy_keeps_safe_fallback_and_never_directly_deletes_ebs() -> None:
+    workflow = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert 'if [[ "$KUBERNETES_ACCESS_READY" == "true" ]]' in workflow
+    assert "Kubernetes API unavailable; continuing directly to Terraform destroy" in workflow
+    assert "aws ec2 delete-volume" not in workflow

@@ -143,3 +143,32 @@ def test_aws_teardown_rejects_ebs_volume_that_still_exists(
 
     assert result.returncode == 1
     assert "vol-0123456789abcdef0" in result.stderr
+
+
+def test_public_endpoint_verifier_waits_for_dns_and_tcp_readiness() -> None:
+    verifier = read("scripts/phase7/verify_public_endpoint.py")
+
+    assert "--readiness-timeout" in verifier
+    assert "--poll-interval" in verifier
+    assert "socket.getaddrinfo" in verifier
+    assert "asyncio.open_connection" in verifier
+    assert "waiting for public endpoint readiness" in verifier
+    assert "public endpoint was not ready" in verifier
+
+
+def test_lifecycle_scripts_never_directly_delete_ebs_volumes() -> None:
+    scripts = "\n".join(
+        path.read_text() for path in sorted(path for path in SCRIPTS.glob("*") if path.is_file())
+    )
+
+    assert "aws ec2 delete-volume" not in scripts
+
+
+def test_ebs_wait_has_timeout_diagnostics() -> None:
+    wait_script = read("scripts/phase7/wait_for_ebs_deletion.sh")
+
+    assert "PHASE7_EBS_WAIT_TIMEOUT_SECONDS" in wait_script
+    assert "PHASE7_EBS_WAIT_POLL_SECONDS" in wait_script
+    assert "timed out waiting for Phase 7 EBS volumes" in wait_script
+    assert "aws ec2 describe-volumes" in wait_script
+    assert "aws ec2 delete-volume" not in wait_script
