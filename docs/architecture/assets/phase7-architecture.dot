@@ -1,7 +1,7 @@
 digraph Phase7 {
-  graph [rankdir=LR, bgcolor="transparent", label="PHASE 7 — PLANNED — NOT IMPLEMENTED", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
-  node [shape=box, style="rounded,filled,dashed", fontname="Arial", color="#64748B", fillcolor="#F1F5F9"];
-  edge [color="#64748B", penwidth=1.5, style=dashed];
+  graph [rankdir=LR, bgcolor="transparent", label="PHASE 7 — VERIFIED TEMPORARY LIFECYCLE", labelloc=t, fontname="Arial Bold", fontsize=20, pad=0.3];
+  node [shape=box, style="rounded,filled", fontname="Arial", color="#16A34A", fillcolor="#DCFCE7"];
+  edge [color="#475569", penwidth=1.5];
   source [label="Source commit"];
   gates [label="Quality + security gates"];
   image [label="Immutable container image"];

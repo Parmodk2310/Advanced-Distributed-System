@@ -220,17 +220,26 @@ Phase 6 does not claim consensus, linearizability, quorum durability, exactly-on
 
 ## Phase 7 — Production Delivery & Portfolio
 
-Status: **LOCAL KUBERNETES IMPLEMENTED; AWS DEMONSTRATION PENDING SEPARATE APPROVAL**
+Status: **VERIFIED COMPLETE**
 
 Implemented/owned:
 
 - `Dockerfile`
-- `deploy/helm/distributed-system/*`
+- `deploy/helm/distributed-system/*` and `deploy/helm/etcd/*`
 - `deploy/kind/*` and optional `deploy/k3d/*`
 - `scripts/phase7/*`
 - `.github/workflows/phase7-*`
-- `deploy/terraform/aws/*` with `enable_eks=false` by default
+- `deploy/terraform/aws/*` with gated AWS execution
 - `docs/runbooks/phase7-*`
 - `docs/verification/phase7.md`
 
-Local exit: repeatable non-root image delivery, three-node StatefulSet, ephemeral mTLS, persistent restart, rollback, CI gates, and cleanup. Cloud exit remains pending an approved exact plan, temporary EKS verification, same-day destroy, and zero-resource evidence.
+Exit: repeatable non-root image delivery, three-replica StatefulSet, ephemeral
+mTLS, persistent restart, rollback, CI/security gates, reviewed Terraform plan,
+temporary AWS EKS verification, exact-digest promotion, same-session destroy,
+EBS lifecycle convergence and zero-unexpected-resource evidence all passed on
+commit `cd89ed476c7898cae9d0cb19158075ccfbd46d86`.
+
+The AWS infrastructure was intentionally temporary and is not a permanently
+hosted production service. `AWS_PHASE7_ENABLED` was returned to `false`
+after the successful destroy run.
+

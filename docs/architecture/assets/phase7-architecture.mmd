@@ -1,7 +1,9 @@
-flowchart TB
-  S["PHASE 7 · PLANNED — NOT IMPLEMENTED"]
-  C["Source commit"] --> G["Quality + security gates"] --> I["Immutable container image"]
-  I --> L["Local kind/k3d validation"] --> H["Helm release contract"]
-  H --> R["Registry digest promotion"] --> T["Terraform-provisioned AWS EKS"]
-  T --> K["Kubernetes workloads · services · config · secrets"] --> V["Rollout verification + rollback"]
-  S -.-> I
+flowchart LR
+  C["Source commit"] --> G["Quality + security gates"]
+  G --> I["Immutable container image"]
+  I --> L["Local kind / k3d validation"]
+  L --> H["Helm release contract"]
+  H --> R["Registry digest promotion"]
+  R --> T["Terraform"]
+  T --> E["AWS EKS"]
+  E --> V["Rollout verification + rollback"]

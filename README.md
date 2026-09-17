@@ -6,9 +6,9 @@
 
 A seven-phase distributed-systems engineering project that evolves from a bounded asynchronous execution engine into a secure, durable, observable, fault-tested multi-node platform.
 
-**Current implementation:** Phase 7A local Kubernetes delivery; AWS demonstration pending
-**Stable release checkpoint:** Phase 6 · `v0.6.0`
-**Next:** separately approved, temporary AWS EKS verification and teardown.
+**Current implementation:** Phases 1–7 complete; local Kubernetes and temporary AWS EKS lifecycle verified
+**Stable release checkpoint:** Phase 7 verification commit · `cd89ed4`
+**Cloud posture:** demonstration infrastructure destroyed after verification; AWS deployment gate disabled.
 
 ---
 
@@ -16,8 +16,8 @@ A seven-phase distributed-systems engineering project that evolves from a bounde
 
 - [Phase 1–7 capability evolution](docs/architecture/phase1-7-evolution.md)
 - [Complete architecture index](docs/architecture/README.md)
-- [Current Phase 6 architecture](docs/architecture/phase6-observability-chaos-performance.md)
-- [Phase 7 local delivery and gated AWS target](docs/architecture/phase7-production-delivery.md)
+- [Phase 6 observability, chaos and performance](docs/architecture/phase6-observability-chaos-performance.md)
+- [Phase 7 verified production-delivery lifecycle](docs/architecture/phase7-production-delivery.md)
 
 ## Run Phase 7 on a laptop
 
@@ -32,6 +32,30 @@ make phase7-release-gate
 ```
 
 This builds and validates the complete local package, then removes the cluster and private TLS material. See the [local Kubernetes runbook](docs/runbooks/phase7-local-kubernetes.md) and [Phase 7 verification status](docs/verification/phase7.md). No AWS resources are created by this command.
+
+---
+
+## Phase 7 verification at a glance
+
+The final release lifecycle was verified on commit `cd89ed4`.
+
+| Verification | Result |
+| --- | --- |
+| Quality workflow | **PASS** |
+| Immutable image, security scan and SBOM | **PASS** |
+| Local three-replica Kubernetes release | **PASS** |
+| Persistence and rollback | **PASS** |
+| Reviewed Terraform plan | **23 add · 0 change · 0 destroy** |
+| Temporary AWS EKS apply and verification | **PASS** |
+| External endpoint cleanup | **PASS** |
+| Helm, PVC/EBS and Terraform teardown | **PASS** |
+| Residual-resource verification | **PASS** |
+| Final AWS execution gate | **Disabled** |
+
+The AWS environment was intentionally temporary. The strongest delivery claim
+is a reproducible and verified apply–test–rollback–destroy lifecycle—not a
+permanently hosted or multi-AZ production service. See the [complete Phase 7
+evidence ledger](docs/verification/phase7.md).
 
 ---
 
@@ -519,7 +543,7 @@ node-2:9102
 | 4 | Causal consistency / CRDT replication | ✅ Complete |
 | 5 | Secure persistence / recovery / etcd | ✅ Complete |
 | 6 | Observability / chaos / performance | ✅ Complete |
-| 7 | Production delivery / cloud / Kubernetes | ⏳ Next |
+| 7 | Production delivery / cloud / Kubernetes | ✅ Complete |
 
 ---
 
@@ -541,12 +565,20 @@ node-2:9102
 
 ## Current status
 
-**Phase 6 is implementation-complete and release-gate verified.**
+**Phases 1–7 are implementation-complete and verification-complete.**
 
-Verified implementation checkpoint:
+Final verified delivery checkpoint:
 
 ```text
-296fdd8 feat(phase6): complete observability chaos and performance gate
+cd89ed4 Merge PR #10: enforce Phase 7 AWS lifecycle convergence
 ```
 
-Phase 7 is intentionally separate so Kubernetes/cloud/release engineering cannot weaken or obscure the correctness evidence established through Phase 6.
+The final Phase 7 evidence covers quality, immutable image provenance, local
+Kubernetes, a reviewed Terraform plan, controlled AWS EKS apply, persistence,
+rollback, temporary external verification, complete teardown and
+zero-unexpected-resource verification. AWS execution is disabled by default
+after the demonstration.
+
+The project remains precise about its boundaries: the verified AWS topology
+used one worker and was intentionally destroyed, so this is not presented as a
+permanently hosted, multi-AZ production service.

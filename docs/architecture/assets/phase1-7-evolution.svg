@@ -84,9 +84,9 @@
 <!-- p7 -->
 <g id="node7" class="node">
 <title>p7</title>
-<path fill="#f1f5f9" stroke="#64748b" stroke-dasharray="5,2" d="M287.95,-41.6C287.95,-41.6 75.81,-41.6 75.81,-41.6 69.81,-41.6 63.81,-35.6 63.81,-29.6 63.81,-29.6 63.81,-12 63.81,-12 63.81,-6 69.81,0 75.81,0 75.81,0 287.95,0 287.95,0 293.95,0 299.95,-6 299.95,-12 299.95,-12 299.95,-29.6 299.95,-29.6 299.95,-35.6 293.95,-41.6 287.95,-41.6"/>
+<path fill="#dcfce7" stroke="#16a34a" d="M287.95,-41.6C287.95,-41.6 75.81,-41.6 75.81,-41.6 69.81,-41.6 63.81,-35.6 63.81,-29.6 63.81,-29.6 63.81,-12 63.81,-12 63.81,-6 69.81,0 75.81,0 75.81,0 287.95,0 287.95,0 293.95,0 299.95,-6 299.95,-12 299.95,-12 299.95,-29.6 299.95,-29.6 299.95,-35.6 293.95,-41.6 287.95,-41.6"/>
 <text xml:space="preserve" text-anchor="middle" x="181.88" y="-25" font-family="Arial" font-size="14.00">P7 · Production delivery</text>
-<text xml:space="preserve" text-anchor="middle" x="181.88" y="-8.2" font-family="Arial" font-size="14.00">PLANNED — NOT IMPLEMENTED</text>
+<text xml:space="preserve" text-anchor="middle" x="181.88" y="-8.2" font-family="Arial" font-size="14.00">VERIFIED TEMPORARY LIFECYCLE</text>
 </g>
 <!-- p6&#45;&gt;p7 -->
 <g id="edge6" class="edge">

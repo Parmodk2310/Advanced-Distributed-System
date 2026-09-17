@@ -2,9 +2,9 @@
 
 ## Status
 
-**PHASE 7A LOCAL DELIVERY IMPLEMENTED AND VERIFIED ON THE WORKING TREE; EXACT-COMMIT CI EVIDENCE PENDING. AWS EKS DEMONSTRATION PENDING SEPARATE APPROVAL.**
+**PHASE 7A LOCAL DELIVERY AND PHASE 7B TEMPORARY AWS EKS LIFECYCLE VERIFIED ON THE EXACT FINAL COMMIT.**
 
-Phase 7A local Kubernetes delivery has passed the cumulative working-tree release gate. Final Phase 7A status still requires evidence from the exact committed source and feature-branch CI. The temporary AWS EKS demonstration remains Phase 7B and requires separate approval before any AWS resource creation.
+Phase 7A local Kubernetes delivery and the separately approved Phase 7B AWS demonstration passed on commit `cd89ed476c7898cae9d0cb19158075ccfbd46d86`. The AWS environment was destroyed after verification, residual-resource checks passed, and the execution gate was returned to `false`.
 
 ## Delivery flow
 
@@ -61,7 +61,7 @@ Phase 7A may be implemented without creating AWS resources. It includes:
 
 ### Phase 7B — Temporary EKS demonstration
 
-Phase 7B is outside the initial implementation authority. Before `terraform apply`, the user must approve the exact Terraform plan, expected resources, region, estimated spend, and teardown procedure.
+Phase 7B was outside the initial implementation authority and therefore required separate approval. Before `terraform apply`, the user approved the exact Terraform plan, expected resources, region, spending boundary and teardown procedure.
 
 The intended boundary is:
 
@@ -319,7 +319,7 @@ Phase 7 documentation must include:
 - known limitations;
 - a verification record containing commands, versions, commit SHA, image digest, chart version, and sanitized results.
 
-The README and architecture status remain “planned” until Phase 7A passes. After Phase 7A, the repository may say “local Kubernetes delivery implemented and verified; AWS EKS demonstration pending.” Only successful Phase 7B evidence may support “temporary AWS EKS deployment verified.”
+The README and architecture status may state “Phase 7 verified complete” because Phase 7A and the separately approved Phase 7B lifecycle passed on the exact final commit. Every such statement must also disclose that the EKS environment was temporary, used one worker, was destroyed after evidence capture, and does not establish permanent production or multi-AZ readiness.
 
 ## Explicit non-goals and non-guarantees
 
@@ -340,8 +340,8 @@ The Kubernetes control plane, etcd dependency, storage provider, and AWS service
 
 ## Completion definition
 
-Phase 7A is complete only when every local and CI acceptance gate passes on the committed implementation and verification evidence is published.
+Phase 7A completed when every local and CI acceptance gate passed on the committed implementation and verification evidence was published.
 
-Phase 7B is complete only after separate user approval, successful temporary EKS verification, same-day destruction, and confirmation that no tagged Phase 7 billable resources remain.
+Phase 7B completed after separate user approval, successful temporary EKS verification, same-session destruction, and confirmation that no unexpected tagged Phase 7 resources remained. See `docs/verification/phase7.md`.
 
 The immutable `v0.6.0` tag is not moved or rewritten. Phase 7 receives a new version only after its applicable gates pass.

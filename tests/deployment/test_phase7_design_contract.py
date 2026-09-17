@@ -13,7 +13,7 @@ def test_phase7_design_preserves_detailed_engineering_boundaries() -> None:
         "quorum durability",
         "exactly-once execution",
         "permanent production hosting",
-        "Phase 7B is outside the initial implementation authority",
+        "Phase 7B was outside the initial implementation authority",
         "No AWS resource is created merely by committing",
     ):
         assert required in text
@@ -32,4 +32,5 @@ def test_phase7_design_keeps_current_delivery_flow_and_truthful_status() -> None
     assert "multi-node or multi-AZ etcd HA" in normalized
 
     assert "APPROVED DESIGN — NOT IMPLEMENTED" not in text
-    assert "aws eks demonstration pending separate approval" in normalized.lower()
+    assert "phase 7b temporary aws eks lifecycle verified" in normalized.lower()
+    assert "does not establish permanent production or multi-AZ readiness" in text

@@ -2,9 +2,9 @@
 
 ## Status
 
-Approved documentation design. Diagram implementation has not started.
+Implemented architecture package, updated after the verified Phase 7 delivery lifecycle.
 
-Phases 1–6 describe implemented and verified behavior. Phase 7 describes an approved target architecture and must always be labeled **PLANNED — NOT IMPLEMENTED**.
+Phases 1–7 describe implemented and verified behavior. Phase 7 must be labeled **VERIFIED TEMPORARY LIFECYCLE** and must not imply permanent hosting or multi-AZ availability.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Create one coherent architecture package that lets:
 
 - a recruiter understand the project’s progression and differentiation quickly;
 - a senior engineer trace each claim to real components, runtime boundaries, verification evidence, and explicit limitations;
-- a future contributor understand what each phase adds without mistaking planned work for implemented behavior.
+- a future contributor understand what each phase adds without overstating the bounded Phase 7 cloud evidence.
 
 ## Deliverables
 
@@ -71,9 +71,9 @@ All diagrams use the same visual vocabulary:
 - teal: observability and operational tooling;
 - gray dashed boundary: external infrastructure;
 - red dashed path: controlled fault or failure path;
-- pale gray: planned Phase 7 components.
+- pale gray: external or separately managed infrastructure boundaries.
 
-Every Phase 1–6 diagram displays **IMPLEMENTED AND VERIFIED**. Every Phase 7 representation displays **PLANNED — NOT IMPLEMENTED** in both the diagram and surrounding text.
+Every Phase 1–7 diagram displays implemented status. Phase 7 representations additionally state that the verified AWS lifecycle was temporary.
 
 Diagrams use a top-down or left-to-right flow with no more than five nodes on one horizontal rank. Labels use domain language first and source identifiers only where they improve traceability.
 
@@ -161,7 +161,7 @@ Telemetry remains outside the correctness-critical path. Healthy benchmark traff
 
 ### Phase 7 — Production Delivery and Cloud Deployment
 
-Label the entire diagram **PLANNED — NOT IMPLEMENTED**.
+Label the diagram **VERIFIED TEMPORARY LIFECYCLE**.
 
 Show the approved promotion path:
 
@@ -190,7 +190,7 @@ Protocol
 → Causal replicated state
 → Durable secure recovery
 → Observable fault-tested runtime
-→ Planned production delivery
+→ Verified production delivery lifecycle
 ```
 
 The overview communicates capability accumulation: later phases extend earlier guarantees rather than replacing them.
@@ -209,7 +209,7 @@ Each phase page contains:
 8. explicit non-guarantees;
 9. links to the design specification, verification evidence and roadmap where available.
 
-The architecture index summarizes all eight diagrams in a compact table and identifies Phase 7 as planned.
+The architecture index summarizes all eight diagrams in a compact table and identifies Phase 7 as verified with a temporary AWS lifecycle.
 
 ## README Integration
 
@@ -218,15 +218,15 @@ Add a concise Architecture section linking to:
 - the cumulative overview;
 - the architecture index;
 - the current Phase 6 architecture;
-- the planned Phase 7 target.
+- the verified Phase 7 delivery lifecycle.
 
 Do not duplicate deep technical detail in the README.
 
 ## Accuracy and Safety Rules
 
-- Do not change runtime code, tests, dependencies, deployment configuration or release scripts.
+- Do not change runtime code, runtime-behavior tests, dependencies, deployment configuration or release scripts. Documentation-contract tests may change only to enforce truthful documentation status and boundaries.
 - Do not modify or move `v0.6.0`.
-- Do not claim Phase 7 implementation, deployment or production readiness.
+- Do not claim permanent Phase 7 hosting, multi-AZ availability or unrestricted production readiness.
 - Do not claim consensus, linearizability, quorum durability, exactly-once execution, distributed transactions or arbitrary fault tolerance.
 - Every implemented component label must map to an existing path or documented behavior.
 - Dates may appear inside historical evidence but not in active architecture filenames.
@@ -242,12 +242,12 @@ Before completion:
 4. confirm each SVG is non-empty and contains its phase status;
 5. validate all relative Markdown links;
 6. validate every Phase 1–6 source mapping against the repository tree;
-7. scan Phase 7 files for the exact planned-status label;
+7. scan Phase 7 files for the verified temporary-lifecycle label and honest limitations;
 8. compare the final diff and confirm no runtime or configuration file changed;
 9. run the existing Quality workflow on the final commit.
 
-The full Docker chaos/performance release gate is unnecessary because this package changes documentation and diagram assets only.
+The full Docker chaos/performance release gate is unnecessary because this package changes documentation, diagram assets and documentation-contract tests only; it does not change runtime behavior or deployment configuration.
 
 ## Completion Criteria
 
-The package is complete when all eight subjects exist in Markdown, Mermaid, DOT and SVG; all links and source mappings validate; Phase 7 is unambiguously planned; the README exposes the architecture set; the repository Quality workflow passes; and `v0.6.0` remains unchanged.
+The package is complete when all eight subjects exist in Markdown, Mermaid, DOT and SVG; all links and source mappings validate; Phase 7 is documented as a verified temporary lifecycle without implying permanent or multi-AZ hosting; the README exposes the architecture set; the repository Quality workflow passes; and `v0.6.0` remains unchanged.
