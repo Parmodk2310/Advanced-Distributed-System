@@ -32,7 +32,7 @@ def test_image_workflow_scans_sbom_signs_and_publishes_digest():
 def test_image_workflow_fetches_full_history_before_gitleaks() -> None:
     text = read(".github/workflows/phase7-image-publish.yml")
 
-    assert """      - uses: actions/checkout@v4
+    assert """      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -160,7 +160,7 @@ def test_aws_apply_requires_cluster_output_but_destroy_can_continue() -> None:
 def test_aws_deploy_installs_python_dependencies_before_verification() -> None:
     workflow = read(".github/workflows/phase7-aws-deploy.yml")
 
-    setup_python = workflow.index("actions/setup-python@v5")
+    setup_python = workflow.index("actions/setup-python@v7")
     install_dependencies = workflow.index("python -m pip install -e .")
     private_verification = workflow.index(
         "- name: Private EKS, persistence and rollback verification"
