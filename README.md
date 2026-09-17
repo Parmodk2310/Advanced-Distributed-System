@@ -6,252 +6,147 @@
 
 **Causal CRDTs · Durable State · etcd · mTLS · Observability · Chaos Engineering · Kubernetes · Terraform · AWS**
 
-<br/>
-
 [![Quality](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml)
-[![Phase 7 Local Kubernetes](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml)
-[![Phase 7 Image](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml)
+[![Local Kubernetes](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml)
+[![Release Image](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-Verified-326CE5?logo=kubernetes&logoColor=white)
-![Terraform](https://img.shields.io/badge/Terraform-Validated-844FBA?logo=terraform&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-EKS%20Lifecycle-FF9900?logo=amazonaws&logoColor=white)
 ![License](https://img.shields.io/badge/License-Apache--2.0-green)
 
-<br/>
+[Architecture](#architecture) · [Verified results](#verified-results) · [Quick start](#quick-start) · [Engineering decisions](#engineering-decisions) · [Release](#release)
 
-[**Architecture**](#architecture) ·
-[**Verification**](#verified-outcome) ·
-[**Quick Start**](#quick-start) ·
-[**Engineering Decisions**](#engineering-decisions) ·
-[**Failure Testing**](#failure-scenarios-exercised) ·
-[**Releases**](#releases) ·
-[**Security**](#security-contributing-and-license)
-
-<br/>
-
-> **Phase 7 · VERIFIED COMPLETE**  
-> Local Kubernetes → immutable artifact → temporary AWS EKS → persistence → rollback → verified teardown
-
-**Verified checkpoint:** `cd89ed476c7898cae9d0cb19158075ccfbd46d86`
+**Phase 7 verified complete · [v0.7.0 released](https://github.com/Parmodk2310/Advanced-Distributed-System/releases/tag/v0.7.0)**
 
 </div>
 
 ---
 
-## The problem
+## Why this project exists
 
-Production AI/ML systems need more than inference. They also need infrastructure
-that can:
+Production AI/ML systems need infrastructure that does more than serve a model.
+They must bound expensive work, route requests across nodes, preserve causal
+context, converge replicated state, recover after restart, authenticate peers,
+expose useful telemetry, survive controlled faults, and ship reproducibly.
 
-- isolate CPU-heavy work from the async event loop,
-- bound overload instead of collapsing unpredictably,
-- route work across nodes,
-- preserve causal context,
-- converge replicated state,
-- recover durable state after restart,
-- authenticate peer nodes,
-- expose useful telemetry,
-- survive controlled failures,
-- ship reproducibly,
-- and prove that cloud infrastructure is actually removed afterward.
+This project implements and tests those concerns as a seven-phase distributed
+runtime. It is a systems-engineering portfolio project, not a claim of a
+commercially hosted service.
 
-This repository builds and verifies those concerns directly.
+## What it demonstrates
 
----
+| Capability | Implementation |
+| --- | --- |
+| Bounded execution | asyncio, process workers, backpressure, rate limits, deadlines |
+| Cluster coordination | SWIM-style membership, incarnation-aware rejoin, etcd leases |
+| Deterministic routing | SHA-256 consistent hashing and failover candidates |
+| Replicated state | causal sessions, version vectors, CRDTs, anti-entropy repair |
+| Durable recovery | per-node SQLite WAL, persist-before-ack, restart restore |
+| Peer security | TLS 1.3, mTLS, certificate SAN identity validation |
+| Operations | Prometheus, OpenTelemetry, Tempo, Grafana, controlled chaos |
+| Delivery | OCI, SBOM, signing, Helm, kind, Terraform, temporary AWS EKS |
 
-## What was built
+## Verified results
 
-- bounded async + CPU execution
-- backpressure, rate limiting, deadlines, retries, circuit breakers
-- SWIM-style membership and incarnation-aware rejoin
-- SHA-256 consistent hashing and failover routing
-- causal sessions and CRDT replication
-- GCounter, PNCounter, ORSet, MVRegister
-- SQLite WAL durability and restart recovery
-- etcd discovery and TTL leases
-- TLS 1.3 and mutual TLS
-- Prometheus, OpenTelemetry, Tempo, Grafana
-- deterministic chaos testing
-- reproducible performance checks
-- hardened non-root OCI packaging
-- SBOM + secret/vulnerability scanning
-- Helm + kind + Kubernetes policy validation
-- Terraform-managed temporary AWS EKS delivery
-- rollback, persistence, external smoke, teardown, residual-resource checks
-
----
-
-## Verified outcome
-
-| Area | Result |
+| Gate | Result |
 | --- | --- |
 | Automated test suite | **435 passed, 8 skipped** |
-| Python quality | Ruff, Black, mypy, compile checks **PASS** |
-| Secret / vulnerability gates | **PASS** |
-| Supply chain | SPDX SBOM + keyless-signed immutable digest |
-| Local Kubernetes | three application replicas **PASS** |
-| CRDT convergence | **PASS** |
-| mTLS rejection | **PASS** |
-| PVC persistence / reuse | **PASS** |
-| Failed-upgrade rollback | **PASS** |
+| Ruff, Black, mypy, compile checks | **PASS** |
+| Gitleaks and Trivy | **PASS** |
+| SPDX SBOM and keyless signing | **PASS** |
+| Three-replica local Kubernetes deployment | **PASS** |
+| CRDT convergence and mTLS rejection | **PASS** |
+| PVC restart persistence and Helm rollback | **PASS** |
 | Reviewed Terraform plan | **23 add · 0 change · 0 destroy** |
-| Temporary AWS EKS apply | **PASS** |
-| External endpoint cleanup | **PASS** |
-| AWS destroy | **PASS** |
-| Residual-resource verification | **PASS** |
-| Final AWS execution gate | **Disabled** |
+| Temporary AWS EKS apply, verify, and destroy | **PASS** |
+| Residual AWS resource check | **PASS** |
+| Current AWS execution gate | **Disabled** |
 
-The AWS demonstration intentionally used **one `t3.medium` worker**. It proved a
-controlled delivery lifecycle, not multi-AZ or node-level high availability.
-
-Full evidence:
-[`docs/verification/phase7.md`](docs/verification/phase7.md)
-
----
+The AWS demonstration used one `t3.medium` worker and was destroyed after
+verification. It proves a controlled delivery lifecycle, not multi-AZ or
+node-level high availability. See the [Phase 7 evidence ledger](docs/verification/phase7.md).
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    C[Client / benchmarks]
-
-    subgraph Runtime["Distributed runtime"]
+flowchart TB
+    C[Clients and benchmarks]
+    subgraph R[Distributed runtime]
         N0[node-0]
         N1[node-1]
         N2[node-2]
-        E[etcd<br/>discovery + leases]
-        DB0[(SQLite WAL<br/>node-0)]
-        DB1[(SQLite WAL<br/>node-1)]
-        DB2[(SQLite WAL<br/>node-2)]
+        E[etcd discovery and leases]
+        D[(Per-node SQLite WAL)]
     end
-
-    subgraph Observability
-        P[Prometheus]
-        O[OpenTelemetry]
-        T[Tempo]
-        G[Grafana]
+    subgraph O[Operations]
+        P[Prometheus and Grafana]
+        T[OpenTelemetry and Tempo]
     end
-
-    subgraph Delivery["Delivery lifecycle"]
-        OCI[Immutable OCI]
+    subgraph X[Delivery]
+        I[Signed OCI and SBOM]
         H[Helm]
-        K[Kind / EKS]
-        TF[Terraform]
+        K[kind or temporary EKS]
     end
-
     C --> N0
     C --> N1
     C --> N2
-
     N0 <--> N1
     N1 <--> N2
-    N0 <--> N2
-
+    N2 <--> N0
     N0 <--> E
     N1 <--> E
     N2 <--> E
-
-    N0 --> DB0
-    N1 --> DB1
-    N2 --> DB2
-
-    P --> N0
-    P --> N1
-    P --> N2
-    N0 --> O
-    N1 --> O
-    N2 --> O
-    O --> T
-    G --> P
-    G --> T
-
-    OCI --> H
-    H --> K
-    TF --> K
+    N0 --> D
+    N1 --> D
+    N2 --> D
+    N0 --> P
+    N1 --> P
+    N2 --> P
+    N0 --> T
+    N1 --> T
+    N2 --> T
+    I --> H --> K
 ```
 
-Architecture references:
-
-- [Phase 1–7 evolution](docs/architecture/phase1-7-evolution.md)
-- [Architecture index](docs/architecture/README.md)
-- [Phase 6 observability / chaos / performance](docs/architecture/phase6-observability-chaos-performance.md)
-- [Phase 7 production delivery](docs/architecture/phase7-production-delivery.md)
-
----
+Each node owns its local SQLite WAL store; the diagram groups those stores for
+readability. Detailed diagrams and source mappings are in the
+[architecture index](docs/architecture/README.md).
 
 ## Engineering decisions
 
-### Bound the expensive work
-
-CPU-heavy tasks run behind bounded workers so the event loop is not used as an
-uncontrolled work queue.
-
-### Make overload explicit
-
-Backpressure, rate limits, deadlines, retries, and circuit breakers are
-first-class behavior rather than hidden side effects.
-
-### Separate liveness from ownership
-
-SWIM-style membership tracks node state; consistent hashing decides deterministic
-ownership and failover candidates.
-
-### Use causal semantics without pretending to provide total order
-
-Version vectors, dotted mutation identity, causal tokens, and session guarantees
-provide targeted consistency without claiming linearizability.
-
-### Persist before acknowledging supported durable mutations
-
-SQLite commits durable CRDT state before ACK. That is **local durability**, not
-quorum durability.
-
-### Bind encryption to peer identity
-
-TLS 1.3/mTLS is combined with logical node identity checks against certificate
-SANs.
-
-### Keep telemetry off the correctness-critical path
-
-Observability is important, but telemetry failure should not become a data-path
-correctness failure.
-
-### Make cloud demos reversible
-
-The AWS path requires a reviewed plan, explicit approval, exact artifact
-promotion, verification, and teardown evidence.
-
----
+- **Bound expensive work.** CPU-heavy tasks execute behind bounded workers so
+  the event loop cannot become an unlimited queue.
+- **Make overload explicit.** Backpressure, rate limits, deadlines, retries,
+  and circuit breakers are observable behavior.
+- **Separate liveness from ownership.** Membership tracks node state;
+  consistent hashing assigns deterministic owners and failover candidates.
+- **Use targeted consistency.** Version vectors, causal tokens, and CRDTs
+  provide causal convergence without claiming total order or linearizability.
+- **Persist before acknowledgement.** Supported durable mutations commit to
+  local SQLite before ACK; this is local durability, not quorum durability.
+- **Bind encryption to identity.** mTLS transport is paired with logical node
+  identity checks against certificate SANs.
+- **Keep telemetry off the correctness path.** Telemetry failure does not
+  become a data-path correctness failure.
+- **Make cloud demonstrations reversible.** Apply requires review and explicit
+  approval; verification is followed by teardown and residual checks.
 
 ## Failure scenarios exercised
 
-| Scenario | Verified behavior |
+| Scenario | Observed behavior |
 | --- | --- |
-| Peer delay | degraded latency; cleanup restores baseline |
-| Peer partition | selected path fails; cleanup restores connectivity |
-| etcd outage | coordination degrades without unnecessarily stopping data plane |
-| Node kill | remaining nodes continue within tested bounds; node rejoins |
-| Pod restart | durable state restored from same PVC |
-| Bad mTLS peer | connection rejected |
-| Unhealthy Helm upgrade | rollout fails; rollback restores healthy release |
-| AWS teardown | application, volumes, cluster, registry, network removed |
+| Peer delay or partition | bounded degradation; cleanup restores connectivity |
+| etcd outage | coordination degrades without unnecessarily stopping data-plane work |
+| Node termination | surviving nodes continue within tested bounds; node rejoins |
+| Pod restart | durable state is restored from the same PVC |
+| Untrusted peer | mTLS connection is rejected |
+| Invalid Helm upgrade | rollout fails; rollback restores the healthy release |
+| AWS teardown | application, storage, cluster, registry, and network are removed |
 
 These are bounded tested scenarios, not proofs of arbitrary fault tolerance.
 
----
-
 ## Quick start
 
-### Requirements
-
-- Python 3.12
-- Docker
-- kind
-- kubectl
-- Helm
-- Terraform
-
-### Setup
+Requirements: Python 3.12 and Docker. The full delivery gate also requires
+kind, kubectl, Helm, Terraform, Conftest, and kubeconform.
 
 ```bash
 git clone https://github.com/Parmodk2310/Advanced-Distributed-System.git
@@ -259,88 +154,22 @@ cd Advanced-Distributed-System
 
 python3.12 -m venv .venv
 source .venv/bin/activate
-
 python -m pip install --upgrade pip
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
-```
 
-### Fast quality gate
-
-```bash
 make quality
 ```
 
-### Full local Phase 7A release gate
+Run the complete local Kubernetes release gate:
 
 ```bash
 make phase7-release-gate
 ```
 
-The local gate builds/scans the image, validates Kubernetes/Terraform,
-starts a temporary kind cluster, verifies distributed behavior, persistence and
-rollback, then cleans up.
-
-**It does not create AWS resources.**
-
----
-
-## Phase 7 AWS demonstration identity
-
-The following immutable identifiers belong to the successful temporary AWS
-demonstration. They are historical verification evidence; they are **not** the
-source or image identity of the forthcoming formal `v0.7.0` release.
-
-
-```text
-Source commit
-cd89ed476c7898cae9d0cb19158075ccfbd46d86
-
-GHCR image
-sha256:6db4ce3304128c8e7aa119d0bc11a8092f1697687a47b68cef42f2b01231e68d
-
-SPDX SBOM artifact
-sha256:749f030421e7aae273412822e304ebfdc1982921cc871b96e20103d7db7993c9
-```
-
-### v0.7.0 release identity
-
-The release candidate passed the full image and local Kubernetes workflows.
-
-```text
-Release source commit
-7995d5342e5c40d83ee36beeed10ba50ce70f00f
-
-GHCR image
-ghcr.io/parmodk2310/distsys-node@sha256:c571c604cf310ddbf8c3c7ea1c9b605ffc8fdf1da5ec755422035643552e3a5f
-
-SPDX SBOM SHA-256
-ba37ef2346f219b1b68468f24c56f9f1ae4f088df772d5b254e5762e9f69e4c9
-
-Image evidence artifact SHA-256
-23291c9c93646a2466acc3a595dadd393509d5edff8f25c9826a191d16c314d8
-
-Image workflow run
-35208700672
-
-Local Kubernetes workflow run
-35208700515
-
-Quality workflow run
-35208700539
-```
-
-The immutable digest was scanned, tested in kind, published to GHCR, and keyless-signed.
-
-Detailed evidence:
-
-- [`docs/verification/phase7.md`](docs/verification/phase7.md)
-- [`docs/verification/phase6.md`](docs/verification/phase6.md)
-- [AWS runbook](docs/runbooks/phase7-aws-demonstration.md)
-- [Rollback runbook](docs/runbooks/phase7-rollback.md)
-- [Security / secrets runbook](docs/runbooks/phase7-security-and-secrets.md)
-
----
+The gate builds and scans the image, validates Kubernetes and Terraform,
+creates a temporary kind cluster, verifies distributed behavior, persistence,
+and rollback, then cleans up. **It does not create AWS resources.**
 
 ## Phase progression
 
@@ -354,35 +183,25 @@ Detailed evidence:
 | 6 | Observability, chaos, performance | Complete |
 | 7 | Kubernetes, supply chain, AWS, rollback, teardown | **Verified complete** |
 
-Historical details remain in `docs/`.
-
----
+See the [Phase 1–7 evolution](docs/architecture/phase1-7-evolution.md) for the
+architecture progression and evidence links.
 
 ## Repository map
 
 ```text
 .
 ├── src/distsys/                 # distributed runtime
-├── tests/                       # unit, integration, deployment contracts
+├── tests/                       # unit, integration, and deployment contracts
 ├── proto/                       # protocol definitions
-├── deploy/
-│   ├── helm/                    # app + etcd charts
-│   ├── kind/                    # local Kubernetes
-│   └── terraform/aws/           # temporary AWS/EKS infrastructure
-├── scripts/
-│   ├── phase6/                  # observability/chaos/performance
-│   └── phase7/                  # delivery/verification/teardown
-├── docs/
-│   ├── architecture/
-│   ├── design/
-│   ├── runbooks/
-│   └── verification/
-├── Dockerfile
-├── Makefile
-└── pyproject.toml
+├── deploy/                      # Helm, kind, and temporary AWS/EKS IaC
+├── scripts/                     # Phase 6–7 verification and teardown
+└── docs/
+    ├── architecture/            # system evolution and rendered diagrams
+    ├── design/                  # detailed correctness contracts
+    ├── runbooks/                # operator procedures
+    ├── verification/            # evidence ledgers
+    └── releases/                # formal release notes
 ```
-
----
 
 ## Technology
 
@@ -391,46 +210,32 @@ Prometheus · OpenTelemetry · Tempo · Grafana · Toxiproxy · Docker · Helm �
 kind · Kubernetes · OPA/Conftest · kubeconform · Terraform · AWS EKS/ECR/EBS ·
 GitHub Actions
 
----
+## Scope boundaries
 
-## What this project does **not** claim
+This project does **not** claim linearizability, consensus, quorum-durable
+acknowledgements, exactly-once distributed execution, distributed ACID
+transactions, Byzantine fault tolerance, multi-AZ availability, permanent
+hosting, production SLOs, internet-scale capacity, or multi-region disaster
+recovery.
 
-- linearizability
-- Raft/Paxos or another consensus protocol
-- quorum-durable acknowledgements
-- exactly-once distributed execution
-- distributed ACID transactions
-- globally serializable writes
-- arbitrary Byzantine fault tolerance
-- multi-AZ or node-level HA from the one-worker AWS demo
-- a permanently hosted production service
-- production SLOs
-- internet-scale capacity
-- multi-region disaster recovery
-- universal benchmark numbers
+Stating these boundaries is part of the correctness story.
 
-These boundaries are part of the engineering story.
+## Release
 
----
+[`v0.7.0 — Verified Kubernetes and AWS Delivery Lifecycle`](https://github.com/Parmodk2310/Advanced-Distributed-System/releases/tag/v0.7.0)
+is the first formal GitHub Release. Its source commit, signed image digest, SBOM
+checksum, workflow runs, and limitations are recorded in the
+[release notes](docs/releases/v0.7.0.md) and [changelog](CHANGELOG.md).
+Those records deliberately separate the **Phase 7 AWS demonstration identity**
+from the **v0.7.0 release identity**.
 
-## Releases
-
-`v0.7.0` is intended to be the first formal GitHub Release after the
-public-readiness review.
-
-- [`CHANGELOG.md`](CHANGELOG.md)
-- [`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md)
-
-Historical tags remain development milestones. A missing historical `v0.5.0`
-tag should not be fabricated.
-
----
+Historical tags are development milestones. No synthetic `v0.5.0` tag was
+created to fill the historical sequence.
 
 ## Security, contributing, and license
 
-- Security policy: [`SECURITY.md`](SECURITY.md)
-- Contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- License: [Apache License 2.0](LICENSE)
+- [Security policy](SECURITY.md)
+- [Contribution guide](CONTRIBUTING.md)
+- [Apache License 2.0](LICENSE)
 
-Third-party projects and cloud services remain under their own licenses and
-terms.
+Third-party projects and cloud services remain under their own licenses and terms.
