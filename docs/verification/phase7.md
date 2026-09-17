@@ -49,7 +49,7 @@ The local release gate verified:
 - Terraform formatting/validation; and
 - cluster and private TLS-material cleanup.
 
-No AWS resource was created by this gate.
+No AWS resource is created by Phase 7A verification, documentation changes or normal development commands.
 
 ## Phase 7B — temporary AWS EKS demonstration
 
@@ -79,6 +79,8 @@ The controlled destroy:
 - retained only the separately managed Terraform state bucket and lock table.
 
 After teardown, `AWS_PHASE7_ENABLED` was set back to `false`.
+
+No `v0.7.0` tag or GitHub release was created by this documentation closure.
 
 ## Verified boundary
 
