@@ -27,3 +27,11 @@ def test_phase7_aws_runbook_documents_temporary_runner_access() -> None:
     assert "PHASE7_API_CIDRS_JSON" in runbook
     assert "always restores" in runbook
     assert "0.0.0.0/0" in runbook
+
+
+def test_phase7_aws_runbook_documents_delayed_storage_cleanup() -> None:
+    runbook = read("docs/runbooks/phase7-aws-demonstration.md")
+
+    assert "600 seconds" in runbook
+    assert "Terraform state bucket and lock table" in runbook
+    assert "EBS volumes" in runbook

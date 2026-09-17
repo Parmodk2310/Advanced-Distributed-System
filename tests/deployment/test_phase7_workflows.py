@@ -155,3 +155,23 @@ def test_aws_apply_requires_cluster_output_but_destroy_can_continue() -> None:
     assert 'if [[ "$ACTION" == "destroy" ]]' in workflow
     assert "No EKS cluster output during apply-demo" in workflow
     assert "Kubernetes cleanup will be skipped" in workflow
+
+
+def test_aws_deploy_installs_python_dependencies_before_verification() -> None:
+    workflow = read(".github/workflows/phase7-aws-deploy.yml")
+
+    setup_python = workflow.index("actions/setup-python@v5")
+    install_dependencies = workflow.index("python -m pip install -e .")
+    private_verification = workflow.index(
+        "- name: Private EKS, persistence and rollback verification"
+    )
+
+    assert setup_python < install_dependencies < private_verification
+
+
+def test_aws_destroy_passes_exact_backend_allowlist_to_teardown_verifier() -> None:
+    workflow = read(".github/workflows/phase7-aws-deploy.yml")
+
+    assert "PHASE7_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}" in workflow
+    assert "PHASE7_TF_LOCK_TABLE: ${{ vars.TF_LOCK_TABLE }}" in workflow
+    assert "bash scripts/phase7/verify_aws_teardown.sh" in workflow

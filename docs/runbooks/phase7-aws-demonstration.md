@@ -37,3 +37,19 @@ destruction continues so that EKS does not remain billable.
 
 After every run, confirm that the cluster either no longer exists or
 its `publicAccessCidrs` exactly match `PHASE7_API_CIDRS_JSON`.
+
+## Teardown convergence
+
+AWS may continue deleting Kubernetes-created EBS volumes after
+Terraform has removed the EKS cluster. The teardown verifier therefore
+polls for up to 600 seconds before reporting unexpected tagged
+resources.
+
+The permanent Terraform state bucket and lock table are retained
+intentionally and are allowed only by their exact protected names.
+Every other tagged resource, including EBS volumes, must disappear
+before `aws-teardown.json` reports success. Because the Resource Groups
+Tagging API can temporarily return deleted EBS ARNs, the verifier
+ignores a volume record only after the EC2 API returns
+`InvalidVolume.NotFound`. Existing volumes and other AWS errors remain
+teardown failures.
