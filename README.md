@@ -11,7 +11,7 @@ A seven-phase engineering project that evolves from a bounded async execution
 engine into a secure, durable, observable, fault-tested distributed platform
 with reproducible Kubernetes and temporary AWS EKS delivery.
 
-> **Verified checkpoint:** `cd89ed476c7898cae9d0cb19158075ccfbd46d86`  
+> **Verified checkpoint:** `cd89ed476c7898cae9d0cb19158075ccfbd46d86`
 > **Cloud posture:** the AWS environment was temporary and was destroyed after
 > verification. No permanently hosted production service is claimed.
 
