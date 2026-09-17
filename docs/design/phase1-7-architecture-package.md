@@ -224,7 +224,7 @@ Do not duplicate deep technical detail in the README.
 
 ## Accuracy and Safety Rules
 
-- Do not change runtime code, tests, dependencies, deployment configuration or release scripts.
+- Do not change runtime code, runtime-behavior tests, dependencies, deployment configuration or release scripts. Documentation-contract tests may change only to enforce truthful documentation status and boundaries.
 - Do not modify or move `v0.6.0`.
 - Do not claim permanent Phase 7 hosting, multi-AZ availability or unrestricted production readiness.
 - Do not claim consensus, linearizability, quorum durability, exactly-once execution, distributed transactions or arbitrary fault tolerance.
@@ -246,7 +246,7 @@ Before completion:
 8. compare the final diff and confirm no runtime or configuration file changed;
 9. run the existing Quality workflow on the final commit.
 
-The full Docker chaos/performance release gate is unnecessary because this package changes documentation and diagram assets only.
+The full Docker chaos/performance release gate is unnecessary because this package changes documentation, diagram assets and documentation-contract tests only; it does not change runtime behavior or deployment configuration.
 
 ## Completion Criteria
 
