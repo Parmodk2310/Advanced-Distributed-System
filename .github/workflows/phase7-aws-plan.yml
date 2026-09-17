@@ -21,10 +21,10 @@ jobs:
       TF_VAR_kubernetes_api_cidrs: ${{ vars.PHASE7_API_CIDRS_JSON }}
       TF_VAR_enable_eks: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v6
         with: {role-to-assume: "${{ vars.AWS_ROLE_ARN }}", aws-region: ap-south-1}
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with: {terraform_version: 1.9.8}
       - name: Build protected backend configuration
         run: |
@@ -47,7 +47,7 @@ jobs:
           terraform -chdir=deploy/terraform/aws show -no-color "$GITHUB_WORKSPACE/.phase7/phase7.tfplan" > .phase7/phase7-plan.txt
           ! grep -q 'aws_nat_gateway' .phase7/phase7-plan.txt
           (cd .phase7 && sha256sum phase7.tfplan > phase7-plan.sha256)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: "phase7-reviewed-plan-${{ github.sha }}"
           path: |
