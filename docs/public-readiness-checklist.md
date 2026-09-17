@@ -9,6 +9,25 @@ be verified against the exact commit that will be published.
 Making a repository public can expose its full reachable Git history, not only
 the current working tree.
 
+## Audit record — 2026-09-17
+
+- Repository visibility at audit start: **private**.
+- Default branch: `main`.
+- `backup/main-before-phase1` has no common ancestor with `main`; preserve it
+  until its unrelated history is inspected separately.
+- `chore/phase1-5-repository-hardening` and
+  `docs/phase7-verification-complete` contain commits not reachable from
+  `main`; preserve them.
+- The phase branches and lifecycle hotfix branches compared as ancestors of
+  `main`; no deletion is performed in this release-preparation change.
+- `docs/public-release-readiness` and
+  `docs/recruiter-first-readme-release-license` are completed documentation
+  branches whose changes were squash-merged; their deletion was separately
+  approved.
+- Full-history Gitleaks, image scanning, SBOM, signature, and local Kubernetes
+  checks remain mandatory GitHub workflow gates for the exact release
+  candidate. This record does not pre-mark those checks as passed.
+
 ## 1. Ownership and licensing
 
 - [ ] Confirm ownership/permission for all first-party source, docs, diagrams,
