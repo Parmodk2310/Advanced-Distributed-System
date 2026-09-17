@@ -1,584 +1,381 @@
 # Advanced Distributed System
 
 [![Quality](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml)
+[![Phase 7 Local Kubernetes](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml)
+[![Phase 7 Image](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Correctness-first distributed infrastructure for reliable AI/ML services.**
 
-A seven-phase distributed-systems engineering project that evolves from a bounded asynchronous execution engine into a secure, durable, observable, fault-tested multi-node platform.
+A seven-phase engineering project that evolves from a bounded async execution
+engine into a secure, durable, observable, fault-tested distributed platform
+with reproducible Kubernetes and temporary AWS EKS delivery.
 
-**Current implementation:** Phases 1–7 complete; local Kubernetes and temporary AWS EKS lifecycle verified
-**Stable release checkpoint:** Phase 7 verification commit · `cd89ed4`
-**Cloud posture:** demonstration infrastructure destroyed after verification; AWS deployment gate disabled.
-
----
-
-## Architecture guide
-
-- [Phase 1–7 capability evolution](docs/architecture/phase1-7-evolution.md)
-- [Complete architecture index](docs/architecture/README.md)
-- [Phase 6 observability, chaos and performance](docs/architecture/phase6-observability-chaos-performance.md)
-- [Phase 7 verified production-delivery lifecycle](docs/architecture/phase7-production-delivery.md)
-
-## Run Phase 7 on a laptop
-
-With Python 3.12, Docker, kind, kubectl, and Helm installed:
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
-python -m pip install -e .
-make phase7-release-gate
-```
-
-This builds and validates the complete local package, then removes the cluster and private TLS material. See the [local Kubernetes runbook](docs/runbooks/phase7-local-kubernetes.md) and [Phase 7 verification status](docs/verification/phase7.md). No AWS resources are created by this command.
+> **Verified checkpoint:** `cd89ed476c7898cae9d0cb19158075ccfbd46d86`
+> **Cloud posture:** the AWS environment was temporary and was destroyed after
+> verification. No permanently hosted production service is claimed.
 
 ---
 
-## Phase 7 verification at a glance
+## The problem
 
-The final release lifecycle was verified on commit `cd89ed4`.
-
-| Verification | Result |
-| --- | --- |
-| Quality workflow | **PASS** |
-| Immutable image, security scan and SBOM | **PASS** |
-| Local three-replica Kubernetes release | **PASS** |
-| Persistence and rollback | **PASS** |
-| Reviewed Terraform plan | **23 add · 0 change · 0 destroy** |
-| Temporary AWS EKS apply and verification | **PASS** |
-| External endpoint cleanup | **PASS** |
-| Helm, PVC/EBS and Terraform teardown | **PASS** |
-| Residual-resource verification | **PASS** |
-| Final AWS execution gate | **Disabled** |
-
-The AWS environment was intentionally temporary. The strongest delivery claim
-is a reproducible and verified apply–test–rollback–destroy lifecycle—not a
-permanently hosted or multi-AZ production service. See the [complete Phase 7
-evidence ledger](docs/verification/phase7.md).
-
----
-
-## Why this project exists
-
-Production AI/ML systems depend on much more than model inference.
-
-They also need infrastructure that can:
+Production AI/ML systems need more than inference. They also need infrastructure
+that can:
 
 - isolate CPU-heavy work from the async event loop,
-- bound overload instead of failing unpredictably,
-- route work across multiple nodes,
+- bound overload instead of collapsing unpredictably,
+- route work across nodes,
 - preserve causal context,
 - converge replicated state,
 - recover durable state after restart,
 - authenticate peer nodes,
-- survive coordination failures,
 - expose useful telemetry,
-- reproduce performance measurements,
-- and prove recovery behavior under controlled faults.
+- survive controlled failures,
+- ship reproducibly,
+- and prove that cloud infrastructure is actually removed afterward.
 
-This repository implements those concerns incrementally while keeping the system's guarantees explicit.
-
-It is intentionally **not** presented as a consensus database or a linearizable distributed store.
+This repository builds and verifies those concerns directly.
 
 ---
 
-## Phase 6 verification at a glance
+## What was built
 
-The Phase 6 release gate completed successfully on 2026-09-15.
+- bounded async + CPU execution
+- backpressure, rate limiting, deadlines, retries, circuit breakers
+- SWIM-style membership and incarnation-aware rejoin
+- SHA-256 consistent hashing and failover routing
+- causal sessions and CRDT replication
+- GCounter, PNCounter, ORSet, MVRegister
+- SQLite WAL durability and restart recovery
+- etcd discovery and TTL leases
+- TLS 1.3 and mutual TLS
+- Prometheus, OpenTelemetry, Tempo, Grafana
+- deterministic chaos testing
+- reproducible performance checks
+- hardened non-root OCI packaging
+- SBOM + secret/vulnerability scanning
+- Helm + kind + Kubernetes policy validation
+- Terraform-managed temporary AWS EKS delivery
+- rollback, persistence, external smoke, teardown, residual-resource checks
 
-| Verification | Result |
+---
+
+## Verified outcome
+
+| Area | Result |
 | --- | --- |
-| Full pytest suite | **373 passed, 8 skipped** |
-| Ruff | **PASS** |
-| Black | **PASS** |
-| mypy | **PASS** |
-| Python compile check | **PASS** |
-| Direct three-node cluster | **PASS** |
-| Prometheus targets | **3/3 healthy** |
-| Grafana provisioning | **PASS** |
-| Tempo trace round-trip | **PASS** |
-| Task quick benchmark | **100% success** |
-| CRDT quick benchmark | **100% success** |
-| Network-delay chaos | **PASS + cleanup** |
-| Network-partition chaos | **PASS + cleanup** |
-| etcd-outage chaos | **PASS + recovery** |
-| Container node-kill chaos | **PASS + recovery** |
-| Final Phase 6 release gate | **PASS** |
+| Automated test suite | **435 passed, 8 skipped** |
+| Python quality | Ruff, Black, mypy, compile checks **PASS** |
+| Secret / vulnerability gates | **PASS** |
+| Supply chain | SPDX SBOM + keyless-signed immutable digest |
+| Local Kubernetes | three application replicas **PASS** |
+| CRDT convergence | **PASS** |
+| mTLS rejection | **PASS** |
+| PVC persistence / reuse | **PASS** |
+| Failed-upgrade rollback | **PASS** |
+| Reviewed Terraform plan | **23 add · 0 change · 0 destroy** |
+| Temporary AWS EKS apply | **PASS** |
+| External endpoint cleanup | **PASS** |
+| AWS destroy | **PASS** |
+| Residual-resource verification | **PASS** |
+| Final AWS execution gate | **Disabled** |
 
-See [`docs/verification/phase6.md`](docs/verification/phase6.md) for the complete evidence record.
+The AWS demonstration intentionally used **one `t3.medium` worker**. It proved a
+controlled delivery lifecycle, not multi-AZ or node-level high availability.
+
+Full evidence:
+[`docs/verification/phase7.md`](docs/verification/phase7.md)
 
 ---
 
 ## Architecture
 
 ```mermaid
-flowchart TB
-    Client["Client / benchmark / smoke tools"]
+flowchart LR
+    C[Client / benchmarks]
 
-    subgraph Runtime["Phase 6 distributed runtime"]
-        N0["node-0<br/>app :18000<br/>obs :9100"]
-        N1["node-1<br/>app :18001<br/>obs :9101"]
-        N2["node-2<br/>app :18002<br/>obs :9102"]
-
-        ETCD["etcd<br/>discovery + leases"]
-        TOXI["Toxiproxy<br/>chaos profile only"]
+    subgraph Runtime["Distributed runtime"]
+        N0[node-0]
+        N1[node-1]
+        N2[node-2]
+        E[etcd<br/>discovery + leases]
+        DB0[(SQLite WAL<br/>node-0)]
+        DB1[(SQLite WAL<br/>node-1)]
+        DB2[(SQLite WAL<br/>node-2)]
     end
 
-    subgraph Observability["Observability stack"]
-        PROM["Prometheus<br/>:9090"]
-        OTEL["OpenTelemetry Collector<br/>OTLP :4318"]
-        TEMPO["Tempo<br/>:3200"]
-        GRAF["Grafana<br/>:3000"]
+    subgraph Observability
+        P[Prometheus]
+        O[OpenTelemetry]
+        T[Tempo]
+        G[Grafana]
     end
 
-    Client --> N0
-    Client --> N1
-    Client --> N2
+    subgraph Delivery["Delivery lifecycle"]
+        OCI[Immutable OCI]
+        H[Helm]
+        K[Kind / EKS]
+        TF[Terraform]
+    end
+
+    C --> N0
+    C --> N1
+    C --> N2
 
     N0 <--> N1
     N1 <--> N2
     N0 <--> N2
 
-    N0 <--> ETCD
-    N1 <--> ETCD
-    N2 <--> ETCD
+    N0 <--> E
+    N1 <--> E
+    N2 <--> E
 
-    N0 -. chaos profile .-> TOXI
-    N1 -. chaos profile .-> TOXI
-    N2 -. chaos profile .-> TOXI
+    N0 --> DB0
+    N1 --> DB1
+    N2 --> DB2
 
-    PROM --> N0
-    PROM --> N1
-    PROM --> N2
+    P --> N0
+    P --> N1
+    P --> N2
+    N0 --> O
+    N1 --> O
+    N2 --> O
+    O --> T
+    G --> P
+    G --> T
 
-    N0 --> OTEL
-    N1 --> OTEL
-    N2 --> OTEL
-
-    OTEL --> TEMPO
-    GRAF --> PROM
-    GRAF --> TEMPO
+    OCI --> H
+    H --> K
+    TF --> K
 ```
 
-Phase 6 intentionally has two network profiles:
+Architecture references:
 
-```text
-DIRECT / HEALTHY BASELINE
-client
-   │
-   ├──► node-0
-   ├──► node-1
-   └──► node-2
-             │
-             └── peer RPCs use direct Docker service DNS
-
-PROXY / CHAOS PROFILE
-client
-   │
-   └──► node
-          │
-          ▼
-      Toxiproxy
-          │
-          ▼
-      peer node / etcd
-```
-
-Healthy benchmarks therefore do not pay chaos-proxy overhead. Fault experiments explicitly opt into proxy routing.
-
-Detailed design: [`docs/architecture/phase6-observability-chaos-performance.md`](docs/architecture/phase6-observability-chaos-performance.md).
+- [Phase 1–7 evolution](docs/architecture/phase1-7-evolution.md)
+- [Architecture index](docs/architecture/README.md)
+- [Phase 6 observability / chaos / performance](docs/architecture/phase6-observability-chaos-performance.md)
+- [Phase 7 production delivery](docs/architecture/phase7-production-delivery.md)
 
 ---
 
-## What Phase 6 adds
+## Engineering decisions
 
-### Observability
+### Bound the expensive work
 
-- Dedicated observability HTTP listeners separate from the application protocol.
-- `/metrics`, `/health/live`, and `/health/ready`.
-- Low-cardinality Prometheus instrumentation.
-- OpenTelemetry spans with W3C trace-context propagation.
-- OTLP export through the OpenTelemetry Collector.
-- Tempo trace storage/query path.
-- Provisioned Grafana data sources and dashboards.
-- Telemetry failures stay off the correctness-critical data path.
+CPU-heavy tasks run behind bounded workers so the event loop is not used as an
+uncontrolled work queue.
 
-### Deterministic chaos engineering
+### Make overload explicit
 
-- Toxiproxy-managed network latency.
-- Selective peer partition.
-- etcd outage/restart.
-- Managed Docker container node kill/restart.
-- Explicit safety gate through `RUN_CHAOS_TESTS=1`.
-- Managed proxy allow-list.
-- Idempotent toxic cleanup.
-- Recovery checks after every injected fault.
-- Existing data-plane continuity checked during applicable degraded states.
+Backpressure, rate limits, deadlines, retries, and circuit breakers are
+first-class behavior rather than hidden side effects.
 
-### Reproducible performance checks
+### Separate liveness from ownership
 
-- Task and CRDT benchmark workloads.
-- Fixed random seed.
-- Environment metadata captured in every artifact.
-- Latency p50/p95/p99.
-- Throughput and success ratio.
-- Correctness checks included with performance output.
-- Quick local profile for regression detection.
-- Formal profile available for longer reproducible experiments.
+SWIM-style membership tracks node state; consistent hashing decides deterministic
+ownership and failover candidates.
 
----
+### Use causal semantics without pretending to provide total order
 
-## Phase 6 verified benchmark snapshot
+Version vectors, dotted mutation identity, causal tokens, and session guarantees
+provide targeted consistency without claiming linearizability.
 
-The final release gate used the **quick regression profile**:
+### Persist before acknowledging supported durable mutations
 
-```text
-concurrency      8
-warmup           1 second
-measurement      5 seconds
-payload          256 bytes
-seed             6
-```
+SQLite commits durable CRDT state before ACK. That is **local durability**, not
+quorum durability.
 
-### Task workload
+### Bind encryption to peer identity
 
-```text
-requests         1650
-successes        1650
-success ratio    1.000
-throughput       ~329.87 req/s
+TLS 1.3/mTLS is combined with logical node identity checks against certificate
+SANs.
 
-p50              ~24.70 ms
-p95              ~38.25 ms
-p99              ~45.45 ms
+### Keep telemetry off the correctness-critical path
 
-correctness      PASS
-valid            true
-```
+Observability is important, but telemetry failure should not become a data-path
+correctness failure.
 
-### CRDT workload
+### Make cloud demos reversible
 
-```text
-requests         1663
-successes        1663
-success ratio    1.000
-throughput       ~332.15 req/s
-
-p50              ~22.33 ms
-p95              ~41.82 ms
-p99              ~51.43 ms
-
-correctness      PASS
-valid            true
-```
-
-These are **local regression measurements**, not universal production performance claims.
+The AWS path requires a reviewed plan, explicit approval, exact artifact
+promotion, verification, and teardown evidence.
 
 ---
 
-## Verified chaos behavior
+## Failure scenarios exercised
 
-### Network delay
+| Scenario | Verified behavior |
+| --- | --- |
+| Peer delay | degraded latency; cleanup restores baseline |
+| Peer partition | selected path fails; cleanup restores connectivity |
+| etcd outage | coordination degrades without unnecessarily stopping data plane |
+| Node kill | remaining nodes continue within tested bounds; node rejoins |
+| Pod restart | durable state restored from same PVC |
+| Bad mTLS peer | connection rejected |
+| Unhealthy Helm upgrade | rollout fails; rollback restores healthy release |
+| AWS teardown | application, volumes, cluster, registry, network removed |
 
-```text
-baseline peer RTT     ~7.46 ms
-degraded peer RTT     ~783.25 ms
-recovered peer RTT    ~6.55 ms
-
-local data plane      healthy
-cleanup               successful
-scenario              PASS
-```
-
-### Network partition
-
-```text
-before fault          reachable
-during fault          unreachable
-after cleanup         reachable
-
-local data plane      healthy
-cleanup               successful
-scenario              PASS
-```
-
-### etcd outage
-
-```text
-coordination before   node-0, node-1, node-2
-during outage         node-0, node-2 observed healthy
-after recovery        node-0, node-1, node-2
-
-data plane            healthy
-recovery              ~2.75 s
-scenario              PASS
-```
-
-### Node kill
-
-```text
-ready before          node-0, node-1, node-2
-during failure        node-0, node-2
-after recovery        node-0, node-1, node-2
-
-data plane            healthy
-recovery              ~2.58 s
-scenario              PASS
-```
-
-These tests demonstrate bounded degraded-mode behavior for the tested scenarios. They do not establish arbitrary fault tolerance or consensus guarantees.
+These are bounded tested scenarios, not proofs of arbitrary fault tolerance.
 
 ---
 
-## Core distributed-system guarantees
+## Quick start
 
-Phase 6 preserves the correctness boundaries established in Phases 1–5.
+### Requirements
 
-### Compute and resilience
+- Python 3.12
+- Docker
+- kind
+- kubectl
+- Helm
+- Terraform
 
-- CPU-heavy work is isolated through bounded workers.
-- Backpressure bounds admitted work.
-- Rate limiting and deadlines are explicit.
-- Retry/circuit-breaker primitives are applied to peer communication where appropriate.
-
-### Cluster and routing
-
-- Three-node asynchronous cluster.
-- SWIM-lite membership and failure detection.
-- Incarnation-aware membership.
-- SHA-256 consistent hashing.
-- Deterministic ownership/failover behavior.
-- Single-hop forwarded task routing.
-
-### Causal consistency and CRDTs
-
-Implemented CRDTs:
-
-- GCounter
-- PNCounter
-- ORSet
-- MVRegister
-
-Causal/session semantics include:
-
-- dotted mutation identity,
-- version vectors,
-- causal tokens,
-- read-your-writes,
-- monotonic reads,
-- monotonic writes,
-- writes-follow-reads,
-- targeted causal repair,
-- replica-aware anti-entropy.
-
-### Persistence and recovery
-
-- SQLite WAL-backed local durable state.
-- Schema versioning/migrations.
-- Stable node installation UUID.
-- Durable causal actor/counter/frontier.
-- Persist-before-memory mutation path.
-- Bounded persistence executor.
-- SQLite online backup.
-- Restart restore/reconciliation.
-- Recovery readiness gating.
-
-### Coordination and security
-
-- etcd discovery and TTL leases.
-- Coordination can degrade without automatically stopping the existing data plane.
-- TLS 1.3 secure profile.
-- Mutual TLS authentication.
-- Logical node identity checked against certificate SANs.
-
----
-
-## Durability semantics
-
-A successful durable CRDT mutation means the **local node committed the mutation before acknowledging it**.
-
-```text
-causal validation
-      │
-      ▼
-persistence admission
-      │
-      ▼
-replication reservation
-      │
-      ▼
-stage Dot + CRDT state
-      │
-      ▼
-SQLite transaction
- ├── CRDT state
- ├── state_version
- ├── causal_context
- └── causal clock
-      │
-      ▼
-COMMIT
-      │
-      ▼
-install in memory
-      │
-      ▼
-async replication
-      │
-      ▼
-ACK
-```
-
-This is **local durability**, not quorum durability.
-
----
-
-## Development setup
-
-Python 3.12 is required.
+### Setup
 
 ```bash
-python -m venv .venv
+git clone https://github.com/Parmodk2310/Advanced-Distributed-System.git
+cd Advanced-Distributed-System
+
+python3.12 -m venv .venv
 source .venv/bin/activate
+
 python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
 ```
 
-Generate development certificates when needed:
-
-```bash
-make phase5-certs
-```
-
----
-
-## Quality gate
+### Fast quality gate
 
 ```bash
 make quality
 ```
 
-Equivalent core checks include:
+### Full local Phase 7A release gate
 
 ```bash
-python -m pytest -q
-python -m ruff check src tests scripts
-python -m black --check src tests scripts
-python -m mypy src/distsys
-python -m compileall -q src
+make phase7-release-gate
 ```
+
+The local gate builds/scans the image, validates Kubernetes/Terraform,
+starts a temporary kind cluster, verifies distributed behavior, persistence and
+rollback, then cleans up.
+
+**It does not create AWS resources.**
 
 ---
 
-## Phase 6 release gate
-
-```bash
-bash scripts/phase6_release_gate.sh
-```
-
-Expected final marker:
+## Immutable release identity
 
 ```text
-Phase 6 release gate passed
+Source commit
+cd89ed476c7898cae9d0cb19158075ccfbd46d86
+
+GHCR image
+sha256:6db4ce3304128c8e7aa119d0bc11a8092f1697687a47b68cef42f2b01231e68d
+
+SPDX SBOM artifact
+sha256:749f030421e7aae273412822e304ebfdc1982921cc871b96e20103d7db7993c9
 ```
+
+Detailed evidence:
+
+- [`docs/verification/phase7.md`](docs/verification/phase7.md)
+- [`docs/verification/phase6.md`](docs/verification/phase6.md)
+- [AWS runbook](docs/runbooks/phase7-aws-demonstration.md)
+- [Rollback runbook](docs/runbooks/phase7-rollback.md)
+- [Security / secrets runbook](docs/runbooks/phase7-security-and-secrets.md)
 
 ---
 
-## Manual Phase 6 cluster
+## Phase progression
 
-Healthy/direct routing:
-
-```bash
-PHASE6_PEER_ROUTING=direct \
-bash scripts/run_phase6_cluster.sh
-```
-
-Chaos/proxy routing:
-
-```bash
-PHASE6_PEER_ROUTING=proxy \
-bash scripts/run_phase6_cluster.sh
-```
-
-Chaos execution is additionally protected by `RUN_CHAOS_TESTS=1`.
-
----
-
-## Monitoring endpoints
-
-| Component | Endpoint |
-| --- | --- |
-| node-0 application | `127.0.0.1:18000` |
-| node-1 application | `127.0.0.1:18001` |
-| node-2 application | `127.0.0.1:18002` |
-| node-0 observability | `127.0.0.1:9100` |
-| node-1 observability | `127.0.0.1:9101` |
-| node-2 observability | `127.0.0.1:9102` |
-| Prometheus | `127.0.0.1:9090` |
-| Grafana | `127.0.0.1:3000` |
-| Tempo | `127.0.0.1:3200` |
-| OTel HTTP receiver | `127.0.0.1:4318` |
-| Toxiproxy API | `127.0.0.1:8474` |
-| etcd chaos proxy | `127.0.0.1:12379` |
-| peer chaos proxies | `127.0.0.1:19100-19102` |
-
-Prometheus scrapes:
-
-```text
-node-0:9100
-node-1:9101
-node-2:9102
-```
-
----
-
-## Seven-phase progression
-
-| Phase | Scope | Status |
+| Phase | Focus | Status |
 | --- | --- | --- |
-| 1 | Foundation / single-node protocol | ✅ Complete |
-| 2 | Compute isolation / resilience | ✅ Complete |
-| 3 | Distributed cluster / routing | ✅ Complete |
-| 4 | Causal consistency / CRDT replication | ✅ Complete |
-| 5 | Secure persistence / recovery / etcd | ✅ Complete |
-| 6 | Observability / chaos / performance | ✅ Complete |
-| 7 | Production delivery / cloud / Kubernetes | ✅ Complete |
+| 1 | Async protocol foundation | Complete |
+| 2 | Compute isolation and resilience | Complete |
+| 3 | Membership and routing | Complete |
+| 4 | Causal sessions and CRDT replication | Complete |
+| 5 | Durable state, recovery, etcd, mTLS | Complete |
+| 6 | Observability, chaos, performance | Complete |
+| 7 | Kubernetes, supply chain, AWS, rollback, teardown | **Verified complete** |
+
+Historical details remain in `docs/`.
+
+---
+
+## Repository map
+
+```text
+.
+├── src/distsys/                 # distributed runtime
+├── tests/                       # unit, integration, deployment contracts
+├── proto/                       # protocol definitions
+├── deploy/
+│   ├── helm/                    # app + etcd charts
+│   ├── kind/                    # local Kubernetes
+│   └── terraform/aws/           # temporary AWS/EKS infrastructure
+├── scripts/
+│   ├── phase6/                  # observability/chaos/performance
+│   └── phase7/                  # delivery/verification/teardown
+├── docs/
+│   ├── architecture/
+│   ├── design/
+│   ├── runbooks/
+│   └── verification/
+├── Dockerfile
+├── Makefile
+└── pyproject.toml
+```
+
+---
+
+## Technology
+
+Python 3.12 · asyncio · Protobuf · SQLite WAL · etcd · CRDTs · TLS 1.3/mTLS ·
+Prometheus · OpenTelemetry · Tempo · Grafana · Toxiproxy · Docker · Helm ·
+kind · Kubernetes · OPA/Conftest · kubeconform · Terraform · AWS EKS/ECR/EBS ·
+GitHub Actions
 
 ---
 
 ## What this project does **not** claim
 
-- linearizability,
-- Raft/Paxos or another consensus protocol,
-- quorum-durable acknowledgements,
-- exactly-once distributed execution,
-- distributed ACID transactions,
-- globally serializable writes,
-- durable replication-outbox delivery,
-- automatic remediation/autoscaling,
-- production Kubernetes readiness,
-- multi-region disaster recovery,
-- universal performance numbers.
+- linearizability
+- Raft/Paxos or another consensus protocol
+- quorum-durable acknowledgements
+- exactly-once distributed execution
+- distributed ACID transactions
+- globally serializable writes
+- arbitrary Byzantine fault tolerance
+- multi-AZ or node-level HA from the one-worker AWS demo
+- a permanently hosted production service
+- production SLOs
+- internet-scale capacity
+- multi-region disaster recovery
+- universal benchmark numbers
+
+These boundaries are part of the engineering story.
 
 ---
 
-## Current status
+## Releases
 
-**Phases 1–7 are implementation-complete and verification-complete.**
+`v0.7.0` is intended to be the first formal GitHub Release after the
+public-readiness review.
 
-Final verified delivery checkpoint:
+- [`CHANGELOG.md`](CHANGELOG.md)
+- [`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md)
 
-```text
-cd89ed4 Merge PR #10: enforce Phase 7 AWS lifecycle convergence
-```
+Historical tags remain development milestones. A missing historical `v0.5.0`
+tag should not be fabricated.
 
-The final Phase 7 evidence covers quality, immutable image provenance, local
-Kubernetes, a reviewed Terraform plan, controlled AWS EKS apply, persistence,
-rollback, temporary external verification, complete teardown and
-zero-unexpected-resource verification. AWS execution is disabled by default
-after the demonstration.
+---
 
-The project remains precise about its boundaries: the verified AWS topology
-used one worker and was intentionally destroyed, so this is not presented as a
-permanently hosted, multi-AZ production service.
+## Security, contributing, and license
+
+- Security policy: [`SECURITY.md`](SECURITY.md)
+- Contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- License: [Apache License 2.0](LICENSE)
+
+Third-party projects and cloud services remain under their own licenses and
+terms.
