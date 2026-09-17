@@ -305,10 +305,32 @@ sha256:749f030421e7aae273412822e304ebfdc1982921cc871b96e20103d7db7993c9
 
 ### v0.7.0 release identity
 
-The formal release will record its exact tagged source commit, GHCR manifest
-digest, SPDX SBOM, keyless signature, and provenance after the release
-candidate passes the image and local Kubernetes workflows. Until those checks
-finish, no newer digest is claimed here.
+The release candidate passed the full image and local Kubernetes workflows.
+
+```text
+Release source commit
+7995d5342e5c40d83ee36beeed10ba50ce70f00f
+
+GHCR image
+ghcr.io/parmodk2310/distsys-node@sha256:c571c604cf310ddbf8c3c7ea1c9b605ffc8fdf1da5ec755422035643552e3a5f
+
+SPDX SBOM SHA-256
+ba37ef2346f219b1b68468f24c56f9f1ae4f088df772d5b254e5762e9f69e4c9
+
+Image evidence artifact SHA-256
+23291c9c93646a2466acc3a595dadd393509d5edff8f25c9826a191d16c314d8
+
+Image workflow run
+35208700672
+
+Local Kubernetes workflow run
+35208700515
+
+Quality workflow run
+35208700539
+```
+
+The immutable digest was scanned, tested in kind, published to GHCR, and keyless-signed.
 
 Detailed evidence:
 

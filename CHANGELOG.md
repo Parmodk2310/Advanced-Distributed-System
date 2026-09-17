@@ -18,7 +18,7 @@ public-readiness review.
 
 No visibility change is implied by this section.
 
-## [v0.7.0] — Planned first formal GitHub Release
+## [v0.7.0] — Verified Kubernetes and AWS Delivery Lifecycle
 
 **Title:** Verified Kubernetes and AWS Delivery Lifecycle
 
@@ -54,10 +54,14 @@ No visibility change is implied by this section.
 
 ### v0.7.0 release identity
 
-The formal tag's exact source commit, GHCR manifest digest, SPDX SBOM, keyless
-signature, and provenance will be recorded only after the final release
-candidate passes the image and local Kubernetes workflows. The identifiers
-above remain historical AWS demonstration evidence.
+The release candidate passed the Quality, Phase 7 Local Kubernetes, and Phase 7 Image workflows.
+
+- Release source commit: `7995d5342e5c40d83ee36beeed10ba50ce70f00f`.
+- GHCR manifest digest: `sha256:c571c604cf310ddbf8c3c7ea1c9b605ffc8fdf1da5ec755422035643552e3a5f`.
+- SPDX SBOM SHA-256: `ba37ef2346f219b1b68468f24c56f9f1ae4f088df772d5b254e5762e9f69e4c9`.
+- Image evidence artifact SHA-256: `23291c9c93646a2466acc3a595dadd393509d5edff8f25c9826a191d16c314d8`.
+- Image workflow: `35208700672`; local Kubernetes: `35208700515`; Quality: `35208700539`.
+- The immutable digest was scanned, tested in kind, published to GHCR, and keyless-signed.
 
 ### Boundaries
 
