@@ -264,7 +264,12 @@ rollback, then cleans up.
 
 ---
 
-## Immutable release identity
+## Phase 7 AWS demonstration identity
+
+The following immutable identifiers belong to the successful temporary AWS
+demonstration. They are historical verification evidence; they are **not** the
+source or image identity of the forthcoming formal `v0.7.0` release.
+
 
 ```text
 Source commit
@@ -276,6 +281,13 @@ sha256:6db4ce3304128c8e7aa119d0bc11a8092f1697687a47b68cef42f2b01231e68d
 SPDX SBOM artifact
 sha256:749f030421e7aae273412822e304ebfdc1982921cc871b96e20103d7db7993c9
 ```
+
+### v0.7.0 release identity
+
+The formal release will record its exact tagged source commit, GHCR manifest
+digest, SPDX SBOM, keyless signature, and provenance after the release
+candidate passes the image and local Kubernetes workflows. Until those checks
+finish, no newer digest is claimed here.
 
 Detailed evidence:
 
