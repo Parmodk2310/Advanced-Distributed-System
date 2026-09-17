@@ -1,5 +1,14 @@
 # Phase 7 temporary AWS EKS demonstration runbook
 
+> Final reference execution: commit
+> `cd89ed476c7898cae9d0cb19158075ccfbd46d86`; apply run
+> [35182138260](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35182138260);
+> destroy run
+> [35183535307](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35183535307).
+> Both succeeded, teardown verification passed, and the AWS gate was disabled.
+> See the [verification ledger](../verification/phase7.md).
+
+
 Do not run until the exact Terraform plan and spending boundary are explicitly approved.
 
 Required GitHub protected configuration: `AWS_PHASE7_ENABLED`, `AWS_ROLE_ARN`, `TF_STATE_BUCKET`, `TF_LOCK_TABLE`, `PHASE7_OWNER`, `PHASE7_EXPIRES_AT`, `PHASE7_API_CIDRS_JSON`, and secret `PHASE7_BUDGET_EMAIL`.
