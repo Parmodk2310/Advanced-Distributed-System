@@ -26,7 +26,7 @@ does not claim that a permanently hosted production service is running.
 | Gate | Run | Result | Evidence |
 | --- | --- | --- | --- |
 | Quality | [35180387246](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35180387246) | **PASS** | Exact final commit |
-| Image build, scan and SBOM | [35180387235](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35180387235) | **PASS** | Immutable GHCR digest and signed artifact metadata |
+| Image build, scan and SBOM | [35180387235](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35180387235) | **PASS** | Signed immutable GHCR digest and uploaded artifact metadata |
 | Local Kubernetes | [35180387466](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35180387466) | **PASS** | Evidence digest `sha256:1b520980f2171dd6a160b564d9352085c777f63d8fa4c550b805b2dac716c16a` |
 | Reviewed AWS plan | [35181947882](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35181947882) | **PASS** | Plan artifact digest `sha256:739ec69f9a6170cb330329d623d8777bb47f7f1415001fadf25565a13c82d2bc` |
 | AWS apply and verification | [35182138260](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/runs/35182138260) | **PASS** | Evidence digest `sha256:7fa63cbb5753e913327a3e972e7793a8f819acd46f4e8675a85721e2225439cb` |
