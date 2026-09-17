@@ -40,7 +40,7 @@ No visibility change is implied by this section.
 - Temporary external endpoint verification.
 - Full AWS teardown and residual-resource verification.
 
-### Verified
+### Phase 7 AWS demonstration identity
 
 - Final implementation checkpoint:
   `cd89ed476c7898cae9d0cb19158075ccfbd46d86`.
@@ -51,6 +51,13 @@ No visibility change is implied by this section.
 - Temporary AWS apply, verification, rollback, and teardown.
 - Zero unexpected tagged resources after cleanup.
 - AWS execution gate disabled after the demonstration.
+
+### v0.7.0 release identity
+
+The formal tag's exact source commit, GHCR manifest digest, SPDX SBOM, keyless
+signature, and provenance will be recorded only after the final release
+candidate passes the image and local Kubernetes workflows. The identifiers
+above remain historical AWS demonstration evidence.
 
 ### Boundaries
 
