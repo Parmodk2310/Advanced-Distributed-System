@@ -24,8 +24,8 @@
 <!-- source&#45;&gt;gates -->
 <g id="edge1" class="edge">
 <title>source&#45;&gt;gates</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M109.82,-20.8C117.29,-20.8 125.12,-20.8 133.04,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="132.83,-24.3 142.83,-20.8 132.83,-17.3 132.83,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M109.82,-20.8C117.29,-20.8 125.12,-20.8 133.04,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="132.83,-24.3 142.83,-20.8 132.83,-17.3 132.83,-24.3"/>
 </g>
 <!-- image -->
 <g id="node3" class="node">
@@ -36,8 +36,8 @@
 <!-- gates&#45;&gt;image -->
 <g id="edge2" class="edge">
 <title>gates&#45;&gt;image</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M307.49,-20.8C315.12,-20.8 322.92,-20.8 330.74,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="330.72,-24.3 340.72,-20.8 330.72,-17.3 330.72,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M307.49,-20.8C315.12,-20.8 322.92,-20.8 330.74,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="330.72,-24.3 340.72,-20.8 330.72,-17.3 330.72,-24.3"/>
 </g>
 <!-- local -->
 <g id="node4" class="node">
@@ -48,8 +48,8 @@
 <!-- image&#45;&gt;local -->
 <g id="edge3" class="edge">
 <title>image&#45;&gt;local</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M528.32,-20.8C536.02,-20.8 543.83,-20.8 551.58,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="551.44,-24.3 561.44,-20.8 551.44,-17.3 551.44,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M528.32,-20.8C536.02,-20.8 543.83,-20.8 551.58,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="551.44,-24.3 561.44,-20.8 551.44,-17.3 551.44,-24.3"/>
 </g>
 <!-- helm -->
 <g id="node5" class="node">
@@ -60,8 +60,8 @@
 <!-- local&#45;&gt;helm -->
 <g id="edge4" class="edge">
 <title>local&#45;&gt;helm</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M740.81,-20.8C748.41,-20.8 756.1,-20.8 763.71,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="763.69,-24.3 773.69,-20.8 763.69,-17.3 763.69,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M740.81,-20.8C748.41,-20.8 756.1,-20.8 763.71,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="763.69,-24.3 773.69,-20.8 763.69,-17.3 763.69,-24.3"/>
 </g>
 <!-- registry -->
 <g id="node6" class="node">
@@ -72,8 +72,8 @@
 <!-- helm&#45;&gt;registry -->
 <g id="edge5" class="edge">
 <title>helm&#45;&gt;registry</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M929.02,-20.8C936.59,-20.8 944.36,-20.8 952.13,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="952.03,-24.3 962.03,-20.8 952.03,-17.3 952.03,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M929.02,-20.8C936.59,-20.8 944.36,-20.8 952.13,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="952.03,-24.3 962.03,-20.8 952.03,-17.3 952.03,-24.3"/>
 </g>
 <!-- terraform -->
 <g id="node7" class="node">
@@ -84,8 +84,8 @@
 <!-- registry&#45;&gt;terraform -->
 <g id="edge6" class="edge">
 <title>registry&#45;&gt;terraform</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M1139.58,-20.8C1147.51,-20.8 1155.35,-20.8 1162.8,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="1162.62,-24.3 1172.62,-20.8 1162.62,-17.3 1162.62,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M1139.58,-20.8C1147.51,-20.8 1155.35,-20.8 1162.8,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="1162.62,-24.3 1172.62,-20.8 1162.62,-17.3 1162.62,-24.3"/>
 </g>
 <!-- eks -->
 <g id="node8" class="node">
@@ -96,8 +96,8 @@
 <!-- terraform&#45;&gt;eks -->
 <g id="edge7" class="edge">
 <title>terraform&#45;&gt;eks</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M1253.2,-20.8C1260.65,-20.8 1268.58,-20.8 1276.38,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="1276.18,-24.3 1286.18,-20.8 1276.18,-17.3 1276.18,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M1253.2,-20.8C1260.65,-20.8 1268.58,-20.8 1276.38,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="1276.18,-24.3 1286.18,-20.8 1276.18,-17.3 1276.18,-24.3"/>
 </g>
 <!-- rollout -->
 <g id="node9" class="node">
@@ -109,8 +109,8 @@
 <!-- eks&#45;&gt;rollout -->
 <g id="edge8" class="edge">
 <title>eks&#45;&gt;rollout</title>
-<path fill="none" stroke="#16a34a" stroke-width="1.5" d="M1368.8,-20.8C1376.11,-20.8 1383.98,-20.8 1391.98,-20.8"/>
-<polygon fill="#64748b" stroke="#16a34a" stroke-width="1.5" points="1391.89,-24.3 1401.89,-20.8 1391.89,-17.3 1391.89,-24.3"/>
+<path fill="none" stroke="#475569" stroke-width="1.5" d="M1368.8,-20.8C1376.11,-20.8 1383.98,-20.8 1391.98,-20.8"/>
+<polygon fill="#64748b" stroke="#475569" stroke-width="1.5" points="1391.89,-24.3 1401.89,-20.8 1391.89,-17.3 1391.89,-24.3"/>
 </g>
 </g>
 </svg>
