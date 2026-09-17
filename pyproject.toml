@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "advanced-distributed-system"
-version = "0.6.0"
-description = "Phase 6: observable, fault-tested distributed infrastructure for reliable AI/ML services"
+version = "0.7.0"
+description = "Correctness-first distributed infrastructure for reliable AI/ML services"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
