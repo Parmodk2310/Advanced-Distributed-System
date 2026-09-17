@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,3 +36,25 @@ def test_phase7_aws_runbook_documents_delayed_storage_cleanup() -> None:
     assert "600 seconds" in runbook
     assert "Terraform state bucket and lock table" in runbook
     assert "EBS volumes" in runbook
+
+
+def test_v070_package_metadata_describes_the_completed_system() -> None:
+    metadata = tomllib.loads(read("pyproject.toml"))["project"]
+
+    assert metadata["version"] == "0.7.0"
+    assert metadata["description"] == (
+        "Correctness-first distributed infrastructure for reliable AI/ML services"
+    )
+    assert "Phase 6" not in metadata["description"]
+
+
+def test_release_docs_separate_demo_and_release_identity() -> None:
+    readme = read("README.md")
+    changelog = read("CHANGELOG.md")
+    release_notes = read("docs/releases/v0.7.0.md")
+
+    for document in (readme, changelog, release_notes):
+        assert "Phase 7 AWS demonstration identity" in document
+        assert "v0.7.0 release identity" in document
+
+    assert "Immutable release identity" not in readme

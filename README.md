@@ -1,19 +1,40 @@
+<div align="center">
+
 # Advanced Distributed System
+
+### Correctness-first distributed infrastructure for reliable AI/ML services
+
+**Causal CRDTs · Durable State · etcd · mTLS · Observability · Chaos Engineering · Kubernetes · Terraform · AWS**
+
+<br/>
 
 [![Quality](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/ci.yml)
 [![Phase 7 Local Kubernetes](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-local-kubernetes.yml)
 [![Phase 7 Image](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml/badge.svg)](https://github.com/Parmodk2310/Advanced-Distributed-System/actions/workflows/phase7-image-publish.yml)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Verified-326CE5?logo=kubernetes&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-Validated-844FBA?logo=terraform&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-EKS%20Lifecycle-FF9900?logo=amazonaws&logoColor=white)
+![License](https://img.shields.io/badge/License-Apache--2.0-green)
 
-**Correctness-first distributed infrastructure for reliable AI/ML services.**
+<br/>
 
-A seven-phase engineering project that evolves from a bounded async execution
-engine into a secure, durable, observable, fault-tested distributed platform
-with reproducible Kubernetes and temporary AWS EKS delivery.
+[**Architecture**](#architecture) ·
+[**Verification**](#verified-outcome) ·
+[**Quick Start**](#quick-start) ·
+[**Engineering Decisions**](#engineering-decisions) ·
+[**Failure Testing**](#failure-scenarios-exercised) ·
+[**Releases**](#releases) ·
+[**Security**](#security-contributing-and-license)
 
-> **Verified checkpoint:** `cd89ed476c7898cae9d0cb19158075ccfbd46d86`
-> **Cloud posture:** the AWS environment was temporary and was destroyed after
-> verification. No permanently hosted production service is claimed.
+<br/>
+
+> **Phase 7 · VERIFIED COMPLETE**  
+> Local Kubernetes → immutable artifact → temporary AWS EKS → persistence → rollback → verified teardown
+
+**Verified checkpoint:** `cd89ed476c7898cae9d0cb19158075ccfbd46d86`
+
+</div>
 
 ---
 
@@ -264,7 +285,12 @@ rollback, then cleans up.
 
 ---
 
-## Immutable release identity
+## Phase 7 AWS demonstration identity
+
+The following immutable identifiers belong to the successful temporary AWS
+demonstration. They are historical verification evidence; they are **not** the
+source or image identity of the forthcoming formal `v0.7.0` release.
+
 
 ```text
 Source commit
@@ -276,6 +302,13 @@ sha256:6db4ce3304128c8e7aa119d0bc11a8092f1697687a47b68cef42f2b01231e68d
 SPDX SBOM artifact
 sha256:749f030421e7aae273412822e304ebfdc1982921cc871b96e20103d7db7993c9
 ```
+
+### v0.7.0 release identity
+
+The formal release will record its exact tagged source commit, GHCR manifest
+digest, SPDX SBOM, keyless signature, and provenance after the release
+candidate passes the image and local Kubernetes workflows. Until those checks
+finish, no newer digest is claimed here.
 
 Detailed evidence:
 
