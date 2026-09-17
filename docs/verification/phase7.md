@@ -80,7 +80,9 @@ The controlled destroy:
 
 After teardown, `AWS_PHASE7_ENABLED` was set back to `false`.
 
-No `v0.7.0` tag or GitHub release was created by this documentation closure.
+The formal `v0.7.0` tag and GitHub Release were subsequently published at the
+verified release source commit recorded above. This later publication did not
+change the immutable image identity or the evidence in this ledger.
 
 ## Verified boundary
 
