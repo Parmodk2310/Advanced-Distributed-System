@@ -26,4 +26,4 @@ flowchart TB
 | 6 | Telemetry, controlled faults and performance gates | [Verification](../verification/phase6.md) |
 | 7 | Local Kubernetes to temporary one-worker AWS EKS lifecycle; destroyed after verification | [Verification](../verification/phase7.md) |
 
-See the [architecture guide](README.md), [design specifications](../design/) and [roadmap](../roadmap.md).
+See the [architecture guide](README.md), [design specifications](../design/), and phase verification ledgers linked above.
