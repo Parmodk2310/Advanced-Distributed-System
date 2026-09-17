@@ -1,6 +1,6 @@
 # Architecture Guide
 
-This guide separates implemented architecture from the gated cloud target. Phases 1–6 and Phase 7 local Kubernetes delivery are implemented; the temporary AWS EKS demonstration remains pending separate approval.
+This guide covers the verified seven-phase architecture. Phase 7 includes local Kubernetes delivery and a controlled, temporary AWS EKS demonstration that was destroyed after evidence capture.
 
 | Phase | Architecture focus | Status | Diagram |
 | --- | --- | --- | --- |
@@ -10,8 +10,8 @@ This guide separates implemented architecture from the gated cloud target. Phase
 | 4 | Causal metadata and CRDT convergence | Implemented and verified | [View](phase4-causal-crdt.md) |
 | 5 | Persistence, recovery, coordination and mTLS | Implemented and verified | [View](phase5-secure-persistence.md) |
 | 6 | Observability, chaos and performance | Implemented and verified | [View](phase6-observability-chaos-performance.md) |
-| 7 | Kubernetes and AWS EKS delivery | **Local implemented; AWS pending** | [View](phase7-production-delivery.md) |
-| 1–7 | Cumulative capability evolution | Mixed status | [View](phase1-7-evolution.md) |
+| 7 | Kubernetes and AWS EKS delivery | **Implemented and verified** | [View](phase7-production-delivery.md) |
+| 1–7 | Cumulative capability evolution | **Complete** | [View](phase1-7-evolution.md) |
 
 ## Visual language
 
