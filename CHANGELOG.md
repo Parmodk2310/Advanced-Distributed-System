@@ -3,20 +3,11 @@
 All notable project milestones are documented here.
 
 Historical tags were engineering checkpoints rather than formal GitHub
-Releases. `v0.7.0` is intended to be the first formal release after the
-public-readiness review.
+Releases. `v0.7.0` is the first formal GitHub Release.
 
 ## [Unreleased]
 
-### Public-readiness preparation
-
-- Recruiter-first README
-- Apache-2.0 license
-- Contribution and security policies
-- Formal `v0.7.0` release notes
-- Public-readiness checklist
-
-No visibility change is implied by this section.
+No unreleased changes are recorded.
 
 ## [v0.7.0] — Verified Kubernetes and AWS Delivery Lifecycle
 
@@ -150,6 +141,6 @@ retroactive release or tag.
 Do not create a synthetic `v0.5.0` tag solely to make the sequence visually
 continuous.
 
-When `v0.7.0` is published, use
-[`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md) as the release body and
-keep the exact source commit and image digest visible.
+The formal `v0.7.0` release uses
+[`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md) as its durable release
+record and keeps the exact source commit and image digest visible.
