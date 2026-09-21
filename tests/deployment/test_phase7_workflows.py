@@ -88,6 +88,8 @@ def test_phase7_heavy_verification_runs_in_main_pr_path() -> None:
         assert "pull_request:" in workflow
         assert "branches: [main]" in workflow
         assert "pull_request_target" not in workflow
+        pr_block = workflow.split("pull_request:", 1)[1].split("concurrency:", 1)[0]
+        assert "paths:" not in pr_block
 
     assert "verify-image-security:" in image
     assert "Secret scan" in image
