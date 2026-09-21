@@ -126,8 +126,8 @@ def test_image_pr_verification_is_read_only_and_publish_is_separate() -> None:
 
 def test_all_github_actions_are_pinned_to_full_commit_shas() -> None:
     workflows = ROOT / ".github" / "workflows"
-    action_ref = re.compile(r"\\buses:\\s+([^\\s#]+)")
-    immutable = re.compile(r"^[^@\\s]+@[0-9a-f]{40}$")
+    action_ref = re.compile(r"\buses:\s+([^\s#]+)")
+    immutable = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
 
     for workflow in workflows.glob("*.yml"):
         for line_number, line in enumerate(workflow.read_text().splitlines(), start=1):
@@ -207,7 +207,9 @@ def test_aws_apply_requires_cluster_output_but_destroy_can_continue() -> None:
 def test_aws_deploy_installs_python_dependencies_before_verification() -> None:
     workflow = read(".github/workflows/phase7-aws-deploy.yml")
 
-    setup_python = workflow.index(\n        "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"\n    )
+    setup_python = workflow.index(
+        "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
+    )
     install_dependencies = workflow.index("python -m pip install -e .")
     private_verification = workflow.index(
         "- name: Private EKS, persistence and rollback verification"
