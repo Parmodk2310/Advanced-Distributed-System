@@ -45,6 +45,4 @@ jobs:
           RUN_CHAOS_TESTS: ""
           RUN_PERFORMANCE_TESTS: ""
           PHASE6_PEER_PROXY_MAP: ""
-        run: |
-          python -m black --diff tests/deployment/test_phase7_workflows.py
-          make quality
+        run: make quality
