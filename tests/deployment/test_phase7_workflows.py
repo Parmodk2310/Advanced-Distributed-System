@@ -35,9 +35,7 @@ def test_image_workflow_fetches_full_history_before_gitleaks() -> None:
 
     checkout = text.index("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
     fetch_depth = text.index("fetch-depth: 0")
-    gitleaks = text.index(
-        "gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7"
-    )
+    gitleaks = text.index("gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7")
 
     assert checkout < fetch_depth < gitleaks
 
@@ -207,9 +205,7 @@ def test_aws_apply_requires_cluster_output_but_destroy_can_continue() -> None:
 def test_aws_deploy_installs_python_dependencies_before_verification() -> None:
     workflow = read(".github/workflows/phase7-aws-deploy.yml")
 
-    setup_python = workflow.index(
-        "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
-    )
+    setup_python = workflow.index("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97")
     install_dependencies = workflow.index("python -m pip install -e .")
     private_verification = workflow.index(
         "- name: Private EKS, persistence and rollback verification"
