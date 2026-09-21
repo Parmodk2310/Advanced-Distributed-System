@@ -141,9 +141,11 @@ def test_all_github_actions_are_pinned_to_full_commit_shas() -> None:
             if target.startswith("./"):
                 continue
 
-            assert immutable.fullmatch(target), (
-                f"{workflow.relative_to(ROOT)}:{line_number} uses mutable action {target}"
+            message = (
+                f"{workflow.relative_to(ROOT)}:{line_number} "
+                f"uses mutable action {target}"
             )
+            assert immutable.fullmatch(target), message
 
 
 def test_aws_deploy_uses_temporary_runner_api_access() -> None:
