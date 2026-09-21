@@ -1,6 +1,8 @@
 # Phase 4 — Causal Consistency & CRDT Replication Design
 
-**Status:** Approved consolidated architecture, pending written-spec review  
+> **Document status:** Historical design record. Phase 4 is implemented and verified. This file preserves the original specification; see the [current architecture](../architecture/phase4-causal-crdt.md) and [verification record](../verification/phase4.md).
+
+**Historical planning status:** Approved consolidated architecture, pending written-spec review  
 **Target release:** `v0.4.0`  
 **Base release:** `v0.3.0`  
 **Feature branch:** `phase/4-causal-crdt`  
