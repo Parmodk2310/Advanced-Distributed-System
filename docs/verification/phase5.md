@@ -1,6 +1,8 @@
 # Phase 5 Verification
 
-This document records both the verification completed on the packaged Phase-5 tree and the environment-specific gates that still must run in the user's WSL development environment before release.
+> **Record status:** Historical pre-release verification record. Phase 5 is now implemented and verified. The required gates below document the closure process at that milestone rather than unfinished current work.
+
+At the time this record was created, it captured verification completed on the packaged Phase-5 tree plus environment-specific gates that still had to run before the phase could be closed. Those closure gates were subsequently completed.
 
 ## Verified on the packaged tree
 
