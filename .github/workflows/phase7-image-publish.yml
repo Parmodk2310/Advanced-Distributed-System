@@ -78,7 +78,7 @@ jobs:
         with: {version: v1.32.2}
 
       - uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1
-        with: {install_only: true, version: v0.26.0}
+        with: {install_only: true, version: v0.31.0}
 
       - name: Helm lint and render
         run: |
