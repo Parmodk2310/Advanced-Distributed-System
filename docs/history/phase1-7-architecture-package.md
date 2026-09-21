@@ -1,3 +1,7 @@
+# Historical Documentation Record
+
+> **Status:** Historical documentation-production record. The architecture package described below has been implemented. For the current reviewer path, start with [docs/README.md](../README.md) and the [architecture index](../architecture/README.md).
+
 # Phase 1–7 Architecture Package Design
 
 ## Status

@@ -1,5 +1,7 @@
 # Phase 2 Verification Record
 
+> **Record status:** Historical milestone verification record. Phase 2 is implemented and verified in the completed seven-phase system. The measurements below are evidence from that phase milestone, not the latest cumulative `main` test count. See the [current phase architecture](../architecture/phase2-compute-resilience.md).
+
 Verification performed in the artifact build environment on 2026-09-12.
 
 ## Functional suite

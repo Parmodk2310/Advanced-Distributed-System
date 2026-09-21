@@ -22,4 +22,4 @@ This guide covers the verified seven-phase architecture. Phase 7 includes local 
 - Gray dashed: planned or external infrastructure.
 - Red dashed: controlled fault paths where applicable.
 
-The durable design contract is [Phase 1–7 Architecture Package Design](../design/phase1-7-architecture-package.md). The full progression is summarized in [Phase 1–7 Evolution](phase1-7-evolution.md).
+The detailed phase contracts are preserved under [`docs/design/`](../design/). The documentation-package planning record is archived under [`docs/history/`](../history/phase1-7-architecture-package.md). The full progression is summarized in [Phase 1–7 Evolution](phase1-7-evolution.md).

@@ -1,5 +1,7 @@
 # Phase 4 Verification Record
 
+> **Record status:** Historical milestone verification record. Phase 4 is implemented and verified in the completed seven-phase system. The measurements below are evidence from that phase milestone, not the latest cumulative `main` test count. See the [current phase architecture](../architecture/phase4-causal-crdt.md).
+
 **Target:** `v0.4.0`  
 **Base:** `v0.3.0`  
 **Feature:** Causal Consistency & CRDT Replication

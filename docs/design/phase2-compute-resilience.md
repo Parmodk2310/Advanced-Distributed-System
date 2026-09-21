@@ -1,5 +1,7 @@
 # Phase 2 Compute & Resilience Design
 
+> **Document status:** Historical design record. Phase 2 is implemented and verified. This file preserves the original design decisions; see the [current architecture](../architecture/phase2-compute-resilience.md) and [verification record](../verification/phase2.md).
+
 ## Goal
 
 Extend the Phase-1 single-node TCP/Protobuf system with bounded execution, CPU-process isolation, rate limiting, request deadlines, and reusable retry/circuit-breaker primitives without adding multi-node behavior.
