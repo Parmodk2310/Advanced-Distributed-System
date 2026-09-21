@@ -12,7 +12,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-Apache--2.0-green)
 
-[Architecture](#architecture) · [Verified results](#verified-results) · [Quick start](#quick-start) · [Engineering decisions](#engineering-decisions) · [Release](#release)
+[Architecture](#architecture) · [Verified results](#verified-results) · [Quick start](#quick-start) · [Documentation](docs/README.md) · [Engineering decisions](#engineering-decisions) · [Release](#release)
 
 **Phase 7 verified complete · [v0.7.0 released](https://github.com/Parmodk2310/Advanced-Distributed-System/releases/tag/v0.7.0)**
 
@@ -48,7 +48,7 @@ commercially hosted service.
 
 | Gate | Result |
 | --- | --- |
-| Automated test suite | **435 passed, 8 skipped** |
+| Automated test suite | **439 passed, 8 skipped** |
 | Ruff, Black, mypy, compile checks | **PASS** |
 | Gitleaks and Trivy | **PASS** |
 | SPDX SBOM and keyless signing | **PASS** |
