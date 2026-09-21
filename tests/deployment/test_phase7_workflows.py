@@ -33,9 +33,7 @@ def test_image_workflow_scans_sbom_signs_and_publishes_digest():
 def test_image_workflow_fetches_full_history_before_gitleaks() -> None:
     text = read(".github/workflows/phase7-image-publish.yml")
 
-    checkout = text.index(
-        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
-    )
+    checkout = text.index("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
     fetch_depth = text.index("fetch-depth: 0")
     gitleaks = text.index(
         "gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7"
