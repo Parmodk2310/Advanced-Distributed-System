@@ -22,17 +22,6 @@ on:
       - .github/workflows/phase7-image-publish.yml
   pull_request:
     branches: [main]
-    paths:
-      - Dockerfile
-      - .dockerignore
-      - pyproject.toml
-      - requirements-dev.txt
-      - src/**
-      - deploy/**
-      - scripts/phase7/**
-      - tests/deployment/**
-      - .github/policies/**
-      - .github/workflows/phase7-image-publish.yml
 
 concurrency:
   group: phase7-image-${{ github.ref }}
