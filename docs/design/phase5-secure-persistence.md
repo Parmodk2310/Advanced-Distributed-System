@@ -1,5 +1,7 @@
 # Phase 5 Secure Persistence & Recovery — Design Specification
 
+> **Document status:** Historical design record. Phase 5 is implemented and verified. This file preserves the original pre-release design; see the [current architecture](../architecture/phase5-secure-persistence.md) and [verification record](../verification/phase5.md).
+
 **Date:** 2026-09-13  
 **Baseline:** `v0.4.0`  
 **Feature branch:** `phase/5-secure-persistence`  
