@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,11 +33,11 @@ def test_image_workflow_scans_sbom_signs_and_publishes_digest():
 def test_image_workflow_fetches_full_history_before_gitleaks() -> None:
     text = read(".github/workflows/phase7-image-publish.yml")
 
-    assert """      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-""" in text
+    checkout = text.index("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
+    fetch_depth = text.index("fetch-depth: 0")
+    gitleaks = text.index("gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7")
+
+    assert checkout < fetch_depth < gitleaks
 
 
 def test_aws_plan_is_manual_oidc_and_saved_plan():
@@ -79,12 +80,21 @@ def test_image_workflow_does_not_ignore_unfixed_high_critical_findings() -> None
     assert "ignore-unfixed: true" not in t
 
 
-def test_phase7_verification_runs_on_feature_branch_pushes() -> None:
+def test_phase7_heavy_verification_runs_in_main_pr_path() -> None:
     image = read(".github/workflows/phase7-image-publish.yml")
     local = read(".github/workflows/phase7-local-kubernetes.yml")
 
-    assert "branches: [main]" not in image
-    assert "branches: [main]" not in local
+    for workflow in (image, local):
+        assert "pull_request:" in workflow
+        assert "branches: [main]" in workflow
+        assert "pull_request_target" not in workflow
+        pr_block = workflow.split("pull_request:", 1)[1].split("concurrency:", 1)[0]
+        assert "paths:" not in pr_block
+
+    assert "verify-image-security:" in image
+    assert "Secret scan" in image
+    assert "Vulnerability scan" in image
+    assert "Live kind verification of exact image" in image
 
 
 def test_image_workflow_tracks_inputs_and_requires_explicit_manual_publish() -> None:
@@ -95,6 +105,43 @@ def test_image_workflow_tracks_inputs_and_requires_explicit_manual_publish() -> 
     assert "inputs.publish" in t
     assert "github.event_name == 'workflow_dispatch'" in t
     assert "github.ref == 'refs/heads/main'" in t
+
+
+def test_image_pr_verification_is_read_only_and_publish_is_separate() -> None:
+    text = read(".github/workflows/phase7-image-publish.yml")
+
+    verify = text.index("  verify-image-security:")
+    publish = text.index("  publish:\n    name: Publish signed immutable image")
+
+    assert verify < publish
+    assert "permissions:\n  contents: read" in text
+    assert "needs: verify-image-security" in text[publish:]
+    assert "packages: write" in text[publish:]
+    assert "id-token: write" in text[publish:]
+    assert "Package exact verified image for publication" in text[verify:publish]
+    assert "Load and verify exact image identity" in text[publish:]
+
+
+def test_all_github_actions_are_pinned_to_full_commit_shas() -> None:
+    workflows = ROOT / ".github" / "workflows"
+    action_ref = re.compile(r"\buses:\s+([^\s#]+)")
+    immutable = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
+
+    for workflow in workflows.glob("*.yml"):
+        for line_number, line in enumerate(workflow.read_text().splitlines(), start=1):
+            match = action_ref.search(line)
+            if match is None:
+                continue
+
+            target = match.group(1)
+            if target.startswith("./"):
+                continue
+
+            assert immutable.fullmatch(target), (
+                workflow.relative_to(ROOT),
+                line_number,
+                target,
+            )
 
 
 def test_aws_deploy_uses_temporary_runner_api_access() -> None:
@@ -160,7 +207,7 @@ def test_aws_apply_requires_cluster_output_but_destroy_can_continue() -> None:
 def test_aws_deploy_installs_python_dependencies_before_verification() -> None:
     workflow = read(".github/workflows/phase7-aws-deploy.yml")
 
-    setup_python = workflow.index("actions/setup-python@v7")
+    setup_python = workflow.index("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97")
     install_dependencies = workflow.index("python -m pip install -e .")
     private_verification = workflow.index(
         "- name: Private EKS, persistence and rollback verification"

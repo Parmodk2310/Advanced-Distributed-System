@@ -49,14 +49,14 @@ jobs:
       PHASE7_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       PHASE7_TF_LOCK_TABLE: ${{ vars.TF_LOCK_TABLE }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Require immutable digest and matching commit
         run: |
           [[ "${{ inputs.approved_ghcr_digest }}" =~ ^sha256:[0-9a-f]{64}$ ]]
           test "$(git rev-parse HEAD)" = "${{ inputs.expected_commit }}"
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
         with: {role-to-assume: "${{ vars.AWS_ROLE_ARN }}", aws-region: ap-south-1}
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         if: inputs.action == 'apply-demo'
         with:
           python-version: "3.12"
@@ -64,13 +64,13 @@ jobs:
       - name: Install Phase 7 verification dependencies
         if: inputs.action == 'apply-demo'
         run: python -m pip install -e .
-      - uses: hashicorp/setup-terraform@v4
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
         with: {terraform_version: 1.9.8}
-      - uses: azure/setup-helm@v5
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with: {version: v3.17.3}
-      - uses: azure/setup-kubectl@v5
+      - uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5
         with: {version: v1.32.2}
-      - uses: imjasonh/setup-crane@v0.4
+      - uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
       - name: Configure remote Terraform state
         run: |
           mkdir -p .phase7/evidence
@@ -289,5 +289,5 @@ jobs:
             --name "$cluster"
       - name: Upload sanitized evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with: {name: "phase7-aws-evidence-${{ github.sha }}", path: .phase7/evidence/*.json, retention-days: 7, if-no-files-found: ignore}

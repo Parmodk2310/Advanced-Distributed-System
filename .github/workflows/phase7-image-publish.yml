@@ -8,6 +8,7 @@ on:
         default: false
         type: boolean
   push:
+    branches: [main]
     paths:
       - Dockerfile
       - .dockerignore
@@ -19,36 +20,55 @@ on:
       - tests/deployment/**
       - .github/policies/**
       - .github/workflows/phase7-image-publish.yml
+  pull_request:
+    branches: [main]
+
 concurrency:
   group: phase7-image-${{ github.ref }}
   cancel-in-progress: true
+
 permissions:
-  attestations: write
   contents: read
-  id-token: write
-  packages: write
+
 env:
+  LOCAL_IMAGE: distsys-node:phase7-${{ github.sha }}
   PUBLISHED_IMAGE: ghcr.io/parmodk2310/distsys-node:${{ github.sha }}
+
 jobs:
-  verify-and-publish:
+  verify-image-security:
+    name: Verify image and security
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env: {GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
-      - uses: actions/setup-python@v7
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with: {python-version: "3.12", cache: pip}
-      - run: python -m pip install -r requirements-dev.txt && python -m pip install -e .
-      - run: python -m pytest tests/deployment -q
-      - uses: azure/setup-helm@v5
+
+      - name: Install verification dependencies
+        run: python -m pip install -r requirements-dev.txt && python -m pip install -e .
+
+      - name: Deployment contract tests
+        run: python -m pytest tests/deployment -q
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with: {version: v3.17.3}
-      - uses: azure/setup-kubectl@v5
+
+      - uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5
         with: {version: v1.32.2}
-      - uses: helm/kind-action@v1
-        with: {install_only: true, version: v0.26.0}
+
+      - uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1
+        with: {install_only: true, version: v0.31.0}
+
       - name: Helm lint and render
         run: |
           mkdir -p .phase7/rendered .phase7/evidence
@@ -57,14 +77,18 @@ jobs:
           helm template phase7 deploy/helm/distributed-system -n distsys -f deploy/helm/distributed-system/values-kind.yaml > .phase7/rendered/app-kind.yaml
           helm template phase7-etcd deploy/helm/etcd -n distsys -f deploy/helm/etcd/values-eks.yaml > .phase7/rendered/etcd-eks.yaml
           helm template phase7 deploy/helm/distributed-system -n distsys -f deploy/helm/distributed-system/values-eks.yaml --set image.repository=example.invalid/distsys-node --set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa > .phase7/rendered/app-eks.yaml
+
       - name: Kubernetes schema and policy validation
         run: |
           for f in .phase7/rendered/*.yaml; do
             docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary < "$f"
           done
           docker run --rm -v "$PWD:/project" openpolicyagent/conftest:v0.58.0 test --namespace phase7.kubernetes --policy /project/.github/policies /project/.phase7/rendered
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v6
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Build candidate image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           load: true
@@ -73,16 +97,28 @@ jobs:
           tags: distsys-node:phase7-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Inspect image
-        env: {IMAGE: "distsys-node:phase7-${{ github.sha }}"}
+
+      - name: Inspect image contract
         run: |
-          test "$(docker image inspect "$IMAGE" --format '{{.Config.User}}')" = "10001:10001"
-          test "$(docker image inspect "$IMAGE" --format '{{json .Config.Entrypoint}}')" = '["python","-m","distsys.main"]'
-          docker run --rm --entrypoint python "$IMAGE" -c 'import distsys; print("import-ok")'
-      - uses: aquasecurity/trivy-action@v0.36.0
-        with: {image-ref: "distsys-node:phase7-${{ github.sha }}", severity: "HIGH,CRITICAL", ignore-unfixed: false, exit-code: "1"}
-      - uses: anchore/sbom-action@v0
-        with: {image: "distsys-node:phase7-${{ github.sha }}", format: spdx-json, output-file: .phase7/evidence/sbom.spdx.json}
+          test "$(docker image inspect "$LOCAL_IMAGE" --format '{{.Config.User}}')" = "10001:10001"
+          test "$(docker image inspect "$LOCAL_IMAGE" --format '{{json .Config.Entrypoint}}')" = '["python","-m","distsys.main"]'
+          docker run --rm --entrypoint python "$LOCAL_IMAGE" -c 'import distsys; print("import-ok")'
+
+      - name: Vulnerability scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: "distsys-node:phase7-${{ github.sha }}"
+          severity: "HIGH,CRITICAL"
+          ignore-unfixed: false
+          exit-code: "1"
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: "distsys-node:phase7-${{ github.sha }}"
+          format: spdx-json
+          output-file: .phase7/evidence/sbom.spdx.json
+
       - name: Live kind verification of exact image
         env:
           PHASE7_SKIP_BUILD: "1"
@@ -93,34 +129,97 @@ jobs:
           python scripts/phase7/verify_cluster.py --output .phase7/evidence/cluster.json
           python scripts/phase7/verify_persistence.py --output .phase7/evidence/persistence.json
           bash scripts/phase7/verify_rollback.sh
-      - uses: imjasonh/setup-crane@v0.4
-      - uses: sigstore/cosign-installer@v3.8.2
+
+      - name: Package exact verified image for publication
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+        run: |
+          mkdir -p .phase7/publish
+          docker image inspect "$LOCAL_IMAGE" --format '{{.Id}}' > .phase7/publish/image-id.txt
+          docker save "$LOCAL_IMAGE" -o .phase7/publish/verified-image.tar
+
+      - name: Upload exact verified image
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: phase7-verified-image-${{ github.sha }}
+          path: .phase7/publish/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: phase7-image-verification-evidence
+          path: .phase7/evidence/*
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Always clean
+        if: always()
+        run: bash scripts/phase7/cluster_down.sh
+
+  publish:
+    name: Publish signed immutable image
+    needs: verify-image-security
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - name: Download exact verified image
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          mkdir -p .phase7/publish .phase7/evidence
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "phase7-verified-image-$GITHUB_SHA" --dir .phase7/publish
+
+      - name: Load and verify exact image identity
+        run: |
+          docker load -i .phase7/publish/verified-image.tar
+          expected="$(cat .phase7/publish/image-id.txt)"
+          actual="$(docker image inspect "$LOCAL_IMAGE" --format '{{.Id}}')"
+          test "$actual" = "$expected"
+
+      - uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
+
+      - uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+
       - name: Publish exact verified image
         id: publish
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish)
-        env: {GHCR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+        env:
+          GHCR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker tag "distsys-node:phase7-${{ github.sha }}" "$PUBLISHED_IMAGE"
+          docker tag "$LOCAL_IMAGE" "$PUBLISHED_IMAGE"
           docker push "$PUBLISHED_IMAGE"
           digest="$(crane digest "$PUBLISHED_IMAGE")"
           [[ "$digest" == sha256:* ]]
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           printf '{"source_commit":"%s","image":"%s","manifest_digest":"%s"}\n' "${{ github.sha }}" "$PUBLISHED_IMAGE" "$digest" > .phase7/evidence/provenance.json
+
       - name: Keyless-sign immutable digest
-        if: steps.publish.outputs.digest != ''
         run: cosign sign --yes "$PUBLISHED_IMAGE@${{ steps.publish.outputs.digest }}"
+
       - name: Attest public-repository provenance
-        if: steps.publish.outputs.digest != '' && github.event.repository.visibility == 'public'
-        uses: actions/attest-build-provenance@v2
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-name: ghcr.io/parmodk2310/distsys-node
-          subject-digest: ${{ steps.publish.outputs.digest }}
+          subject-digest: "${{ steps.publish.outputs.digest }}"
           push-to-registry: true
-      - name: Upload evidence
+
+      - name: Upload publication evidence
         if: always()
-        uses: actions/upload-artifact@v7
-        with: {name: phase7-image-evidence, path: .phase7/evidence/*, retention-days: 7, if-no-files-found: ignore}
-      - name: Always clean
-        if: always()
-        run: bash scripts/phase7/cluster_down.sh
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: phase7-image-publication-evidence
+          path: .phase7/evidence/*
+          retention-days: 7
+          if-no-files-found: ignore
