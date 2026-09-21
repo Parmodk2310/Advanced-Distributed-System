@@ -1,5 +1,7 @@
 # Phase 3 Verification
 
+> **Record status:** Historical milestone verification record. Phase 3 is implemented and verified in the completed seven-phase system. The measurements below are evidence from that phase milestone, not the latest cumulative `main` test count. See the [current phase architecture](../architecture/phase3-distributed-cluster.md).
+
 Date: 2026-09-13
 
 ## Automated behavior verification in the generated package
