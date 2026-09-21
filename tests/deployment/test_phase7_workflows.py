@@ -113,7 +113,9 @@ def test_image_pr_verification_is_read_only_and_publish_is_separate() -> None:
     text = read(".github/workflows/phase7-image-publish.yml")
 
     verify = text.index("  verify-image-security:")
-    publish = text.index("  publish:")
+    publish = text.index(
+        "  publish:\n    name: Publish signed immutable image"
+    )
 
     assert verify < publish
     assert "permissions:\n  contents: read" in text
