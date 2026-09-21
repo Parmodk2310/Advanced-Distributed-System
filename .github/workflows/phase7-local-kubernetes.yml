@@ -6,7 +6,6 @@ on:
     paths: ["Dockerfile", "deploy/**", "scripts/phase7/**", "tests/deployment/**", ".github/workflows/phase7-*.yml"]
   pull_request:
     branches: [main]
-    paths: ["Dockerfile", "deploy/**", "scripts/phase7/**", "tests/deployment/**", ".github/workflows/phase7-*.yml"]
 concurrency:
   group: phase7-local-${{ github.ref }}
   cancel-in-progress: true
