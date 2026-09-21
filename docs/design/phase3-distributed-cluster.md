@@ -1,6 +1,8 @@
 # Phase 3 Distributed Cluster Design
 
-**Status:** Approved written specification  
+> **Document status:** Historical design record. Phase 3 is implemented and verified. This file preserves the original specification; see the [current architecture](../architecture/phase3-distributed-cluster.md) and [verification record](../verification/phase3.md).
+
+**Historical planning status:** Approved written specification  
 **Target release:** `v0.3.0`  
 **Base release:** `v0.2.0`  
 **Feature branch:** `phase/3-distributed-cluster`
