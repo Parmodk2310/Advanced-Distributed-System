@@ -1,8 +1,10 @@
 # Phase 6 Observability, Chaos, and Performance Design
 
+> **Document status:** Historical design record. Phase 6 is implemented and verified. This file preserves the original design direction; see the [current architecture](../architecture/phase6-observability-chaos-performance.md) and [verification record](../verification/phase6.md).
+
 ## Status
 
-Approved architecture direction: Prometheus metrics, OpenTelemetry tracing,
+Historical design status: approved architecture direction using Prometheus metrics, OpenTelemetry tracing,
 Grafana visualization, and Toxiproxy-based network chaos.
 
 ## Goal
