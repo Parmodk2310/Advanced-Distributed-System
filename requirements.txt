@@ -1,4 +1,4 @@
-protobuf>=4.25,<7
+protobuf>=4.25,<8
 etcd3gw>=2.7,<3
 
 # Phase 6 observability / chaos
