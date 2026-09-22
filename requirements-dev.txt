@@ -4,7 +4,7 @@ pytest-asyncio>=0.21
 ruff>=0.6
 black>=24.0
 mypy>=1.10
-grpcio-tools==1.81.1
+grpcio-tools==1.84.0
 types-protobuf==7.35.1.20260906
 
 PyYAML>=6.0,<7
