@@ -70,7 +70,7 @@ jobs:
         with: {version: v3.17.3}
       - uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5
         with: {version: v1.32.2}
-      - uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
+      - uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
       - name: Configure remote Terraform state
         run: |
           mkdir -p .phase7/evidence
